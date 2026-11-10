@@ -1,0 +1,2 @@
+# Sealed SDK and template inventories hash the original file bytes.
+* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
