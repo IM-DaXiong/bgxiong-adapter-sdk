@@ -181,12 +181,16 @@ fn config(workspace: DevelopmentWorkspace, origin: &str, fixture: &Fixture) -> R
         configuration_ref: "nonsecret-config".into(),
     }
 }
-fn make_host(workspace: DevelopmentWorkspace, origin: &str, path: &Path) -> ReferenceHost {
-    let f = fixture();
+fn fixture_trust() -> TrustContext {
     let mut trust = TrustContext::default();
     trust.supported_features.insert("stream-events-v1".into());
     trust.supported_features.insert("operation-preflight-v1".into());
-    let package = LoadedPackage::load(path, &trust).unwrap();
+    trust
+}
+
+fn make_host(workspace: DevelopmentWorkspace, origin: &str, path: &Path) -> ReferenceHost {
+    let f = fixture();
+    let package = LoadedPackage::load(path, &fixture_trust()).unwrap();
     let binding = Binding::new(
         "binding".into(),
         package.verified(),
@@ -680,9 +684,7 @@ async fn discovery_can_render_a_first_configuration_without_network_privileges()
     let (origin, calls, server) = server().await;
     let directory = tempfile::tempdir().unwrap();
     let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
-    let mut trust = TrustContext::default();
-    trust.supported_features.insert("stream-events-v1".into());
-    let package = LoadedPackage::load(f.package_a.path(), &trust).unwrap();
+    let package = LoadedPackage::load(f.package_a.path(), &fixture_trust()).unwrap();
     let binding = Binding::new("binding".into(), package.verified(), 1, json!({})).unwrap();
     let host = ReferenceHost::new(config(workspace, &origin, f), package, binding).unwrap();
     let receipt = host

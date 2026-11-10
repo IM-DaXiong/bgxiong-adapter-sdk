@@ -79,6 +79,20 @@ fn scoped_ids_anchors_and_escaped_pointers_keep_native_schema_semantics() {
     let registry=SchemaRegistry::register(vec![document("escaped",schema)]).unwrap();assert!(registry.validate("escaped",&json!(3)).is_err());
     let duplicate=json!({"$defs":{"a":{"$id":"same.json","type":"integer"},"b":{"$id":"same.json","type":"string"}}});
     assert!(SchemaRegistry::register(vec![document("duplicate",duplicate)]).is_err());
+
+    let duplicate_anchor = json!({"$defs":{
+        "a":{"$anchor":"shared","type":"integer"},
+        "b":{"$anchor":"shared","type":"string"}
+    }});
+    assert!(SchemaRegistry::register(vec![document("duplicate-anchor", duplicate_anchor)]).is_err());
+
+    let separate_scopes = json!({"$defs":{
+        "a":{"$id":"a.json","$anchor":"shared","type":"integer"},
+        "b":{"$id":"b.json","$anchor":"shared","type":"string"}
+    },"$ref":"b.json#shared"});
+    let registry = SchemaRegistry::register(vec![document("separate-scopes", separate_scopes)]).unwrap();
+    assert!(registry.validate("separate-scopes", &json!("text")).is_ok());
+    assert!(registry.validate("separate-scopes", &json!(1)).is_err());
     let mut c=serde_json::to_value(cap()).unwrap();c["operations"][0]["uiSchema"]["controls"][0]["widget"]=json!("toggle");
     let c = serde_json::from_value(c).unwrap();
     validate_contract(&c).unwrap();

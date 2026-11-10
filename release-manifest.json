@@ -265,7 +265,7 @@
     {
       "source": "crates/reference-host/tests/six_operations.rs",
       "target": "crates/reference-host/tests/six_operations.rs",
-      "sha256": "23939d813a515b9e72a3d44bdd1f35cc5d160f3afeee749c1bcecfc20db381f9",
+      "sha256": "52b21c2ba54def764bf8443f47034e0a205b003b243ade6cd5f5ec87bbf21179",
       "required": true
     },
     {
@@ -499,7 +499,7 @@
     {
       "source": "crates/validator/src/schema_registry.rs",
       "target": "crates/validator/src/schema_registry.rs",
-      "sha256": "921ca5029f37252f8f867fa7d82e96cd673cfc7696522ed06e6dd9852805abeb",
+      "sha256": "0e8948c036360a7483c174adb02c388b1e3f2d9a513d60ecd0d728f34ca57d04",
       "required": true
     },
     {
@@ -535,7 +535,7 @@
     {
       "source": "crates/validator/tests/strict_contract.rs",
       "target": "crates/validator/tests/strict_contract.rs",
-      "sha256": "42eeece91f1f94ca8cbf39ff53e53a028ca68ffed64d659e14e95a6d7f11f1c9",
+      "sha256": "96222205bc506bfd04ba4359e012a1fc1357c6806efc883170a2b9c7ac84dcea",
       "required": true
     },
     {

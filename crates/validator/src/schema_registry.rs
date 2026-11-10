@@ -240,7 +240,7 @@ fn collect_ids(
     base: &str,
     owner: &str,
     pointer: &str,
-    ids: &mut BTreeMap<String, (String, String)>,
+    ids: &mut BTreeSet<String>,
 ) -> Result<(), ContractError> {
     let base_uri = jsonschema::uri::from_str(base)
         .map_err(|_| ContractError::new("INVALID_PACKAGE", owner, "invalid resource base"))?;
@@ -257,21 +257,21 @@ fn collect_ids(
     } else {
         base.to_owned()
     };
-    let mut names = Vec::new();
-    if pointer.is_empty() || node.get("$id").is_some() {
-        names.push(scoped.clone());
-    }
-    if let Some(anchor) = node.get("$anchor").and_then(Value::as_str) {
-        names.push(format!("{scoped}#{anchor}"));
-    }
-    for uri in names {
-        let key = (owner.to_owned(), pointer.to_owned());
-        // Packages may re-embed published profile $id copies (e.g. media-target-selection-v1).
-        // Keep the first registration; identical URI from another owner/pointer is tolerated.
-        if ids.get(&uri).is_some_and(|prior| prior != &key) {
-            continue;
+    let registers_id = scoped != base || (!pointer.is_empty() && node.get("$id").is_some());
+    let identities = [
+        registers_id.then(|| (scoped.clone(), "$id")),
+        node.get("$anchor")
+            .and_then(Value::as_str)
+            .map(|anchor| (format!("{scoped}#{anchor}"), "$anchor")),
+    ];
+    for (uri, keyword) in identities.into_iter().flatten() {
+        if !ids.insert(uri) {
+            return Err(ContractError::new(
+                "INVALID_PACKAGE",
+                format!("{owner}{pointer}/{keyword}"),
+                "duplicate scoped schema identity",
+            ));
         }
-        ids.insert(uri, key);
     }
     for (suffix, child) in children(node) {
         collect_ids(child, &scoped, owner, &(pointer.to_owned() + &suffix), ids)?;
@@ -397,12 +397,12 @@ impl SchemaRegistry {
             })?;
             docs.insert(id, schema);
         }
-        let mut ids = BTreeMap::new();
-        for id in docs.keys() {
-            ids.insert(resource_uri(id)?, (id.clone(), String::new()));
-        }
         for (id, doc) in &docs {
-            collect_ids(doc, &resource_uri(id)?, id, "", &mut ids)?;
+            let base = resource_uri(id)?;
+            // Separate documents may embed a published profile under its original URI.
+            // Within one document each scoped identity must point to a single location.
+            let mut ids = BTreeSet::from([base.clone()]);
+            collect_ids(doc, &base, id, "", &mut ids)?;
         }
         let mut builder = Registry::new()
             .draft(Draft::Draft202012)
