@@ -151,7 +151,7 @@ fn config(workspace: DevelopmentWorkspace, origin: &str, fixture: &Fixture) -> R
     ReferenceConfig {
         workspace,
         sdk_root: fixture.sdk.clone(),
-        worker: fixture.sdk.join("target/debug/bgx-adapter-v2-worker.exe"),
+        worker: fixture.sdk.join("target/debug").join(format!("bgx-adapter-v2-worker{}", std::env::consts::EXE_SUFFIX)),
         transport: Options {
             handshake_timeout: Duration::from_secs(5),
             write_timeout: Duration::from_secs(5),

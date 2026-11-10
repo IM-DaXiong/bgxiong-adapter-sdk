@@ -10,8 +10,9 @@ import json
 import subprocess
 import tempfile
 
+from export_sdk import no_links, relative
+
 SDK = Path(__file__).resolve().parents[1]
-ROOT = SDK.parents[2]
 
 
 def sha(path):
@@ -31,18 +32,29 @@ def git(root, *args):
     return subprocess.check_output(["git", "-C", str(root), *args])
 
 
+def repository_root(value):
+    root = no_links(Path(value).absolute())
+    if Path(git(root, "rev-parse", "--show-toplevel").decode().strip()) != root:
+        raise ValueError("protected root is not a Git checkout root")
+    return root
+
+
 def inventory(root):
     return sorted(set(x.decode("utf-8") for x in
                       git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard").split(b"\0") if x))
 
 
 def protected(paths, policy):
-    return [p for p in paths if p != policy["managementFile"] and
+    return [p for p in paths if p != policy.get("managementFile") and
             not any(p.startswith(prefix) for prefix in policy["allowedRoots"])]
 
 
 def snapshot(root, paths):
-    return {p: sha(root / p) if (root / p).is_file() else None for p in paths}
+    result = {}
+    for name in paths:
+        path = root / relative(name)
+        result[name] = sha(no_links(path, True)) if path.is_file() else None
+    return result
 
 
 def verify(root, baseline, paths=None):
@@ -89,31 +101,32 @@ def self_test():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--protected-root", type=Path, default=SDK)
     parser.add_argument("--source-root", type=Path)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.out.exists():
         parser.error("baseline already exists; refusing to replace audit history")
-    policy = json.loads((SDK / "isolation-policy.json").read_text(encoding="utf-8"))
-    ledger = json.loads((ROOT / policy["managementFile"]).read_text(encoding="utf-8"))
-    design = ledger["publicDesignFiles"]
-    for rel, expected in design.items():
-        if not (ROOT / rel).is_file() or sha(ROOT / rel) != expected:
-            parser.error("missing or changed design asset: " + rel)
-        if args.source_root and sha(args.source_root / rel) != expected:
-            parser.error("source/worktree design differs: " + rel)
-    files = snapshot(ROOT, protected(inventory(ROOT), policy))
-    data = {"schemaVersion": 1, "baseCommit": git(ROOT, "rev-parse", "HEAD").decode().strip(),
-            "workspaceRoot": str(ROOT), "sourceRoot": str(args.source_root) if args.source_root else None,
+    root = repository_root(args.protected_root)
+    policy = json.loads(no_links(root / "isolation-policy.json", True).read_text(encoding="utf-8"))
+    design = snapshot(root, policy["designFiles"])
+    if not design or any(value is None for value in design.values()):
+        parser.error("missing design asset")
+    if args.source_root and snapshot(no_links(args.source_root.absolute()), design) != design:
+        parser.error("source/worktree design differs")
+    files = snapshot(root, protected(inventory(root), policy))
+    data = {"schemaVersion": 1, "baseCommit": git(root, "rev-parse", "HEAD").decode().strip(),
+            "workspaceRoot": str(root), "sourceRoot": str(args.source_root) if args.source_root else None,
             "policy": policy, "publicDesignFiles": design, "publicDesignDigest": digest(design),
             "protectedFiles": files, "protectedDigest": digest(files),
-            "dirtyFiles": git(ROOT, "status", "--porcelain=v1", "-uall").decode("utf-8"),
+            "dirtyFiles": git(root, "status", "--porcelain=v1", "-uall").decode("utf-8"),
             "selfTests": self_test() if args.self_test else []}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    errors = verify(root, data)
     print(json.dumps({"protectedCount": len(files), "publicDesignDigest": data["publicDesignDigest"],
-                      "selfTests": data["selfTests"], "isolationErrors": verify(ROOT, data)}))
-    if verify(ROOT, data):
+                      "selfTests": data["selfTests"], "isolationErrors": errors}))
+    if errors:
         raise SystemExit(1)
 
 

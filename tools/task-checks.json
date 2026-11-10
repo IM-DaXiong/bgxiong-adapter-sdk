@@ -12,7 +12,9 @@
           "{python}",
           "{sdk}/tools/check_isolation.py",
           "--baseline",
-          "{repo}/docs/dev/reports/sdk-v2-development/baseline.json"
+          "{baseline}",
+          "--protected-root",
+          "{protectedRoot}"
         ]
       ]
     },

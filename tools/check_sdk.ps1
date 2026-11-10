@@ -1,10 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$Task, [string]$PythonExecutable = 'python',
-      [string]$BaselinePath, [string]$AuthorEvidenceRoot, [string]$AuthorProof,
+      [string]$BaselinePath, [string]$ProtectedRoot, [string]$AuthorEvidenceRoot, [string]$AuthorProof,
       [string[]]$ArtifactRoot = @())
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $sdkRoot = Split-Path $PSScriptRoot -Parent
-$repoRoot = [IO.Path]::GetFullPath((Join-Path $sdkRoot '../../..'))
 $checks = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'task-checks.json') | ConvertFrom-Json -AsHashtable
 if (-not $checks.tasks.ContainsKey($Task)) { Write-Error "UNKNOWN_TASK: $Task"; exit 2 }
 foreach ($relative in $checks.tasks[$Task].requiredPaths) {
@@ -16,12 +15,13 @@ function Run-Checked([string]$Executable, [string[]]$Arguments) {
 }
 switch ($Task) {
     'SD00' {
-        if (-not $BaselinePath) { $BaselinePath = Join-Path $repoRoot 'docs/dev/reports/sdk-v2-development/baseline.json' }
-        Run-Checked $PythonExecutable @((Join-Path $PSScriptRoot 'check_isolation.py'), '--baseline', $BaselinePath)
+        if (-not $BaselinePath -or -not $ProtectedRoot) { throw 'SD00 requires explicit BaselinePath and ProtectedRoot' }
+        Run-Checked $PythonExecutable @((Join-Path $PSScriptRoot 'check_isolation.py'), '--baseline', $BaselinePath, '--protected-root', $ProtectedRoot)
     }
     'SD01' {
         $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('bgx-sdk-workspace-' + [Guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $testRoot | Out-Null
+        $pushedCopy = $false
         try {
             # Later tasks add nested author/compiler caches. Copy only ordinary
             # public files and reject links before descending, at every depth.
@@ -29,7 +29,7 @@ switch ($Task) {
             New-Item -ItemType Directory -Path $copyRoot | Out-Null
             function Copy-PublicSource([string]$Source, [string]$Destination) {
                 foreach ($item in Get-ChildItem -LiteralPath $Source -Force) {
-                    if ($item.Name -in @('target', '.sdk-test-workspaces', '.git', '.bgx-sdk', 'node_modules', '__pycache__')) { continue }
+                    if ($item.Name -in @('target', '.sdk-test-workspaces', '.git', '.bgx-sdk', 'node_modules', '__pycache__', 'artifacts')) { continue }
                     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'public source copy refuses reparse points' }
                     $target = Join-Path $Destination $item.Name
                     if ($item.PSIsContainer) {
@@ -40,6 +40,8 @@ switch ($Task) {
             }
             Copy-PublicSource $sdkRoot $copyRoot
             $manifest = Join-Path $copyRoot 'Cargo.toml'
+            Push-Location $copyRoot
+            $pushedCopy = $true
             $json = & cargo metadata --locked --offline --format-version 1 --no-deps --manifest-path $manifest
             if ($LASTEXITCODE -ne 0) { throw 'independent cargo metadata failed' }
             $metadata = $json | ConvertFrom-Json
@@ -61,6 +63,7 @@ switch ($Task) {
             if ($LASTEXITCODE -eq 0) { throw 'unimplemented task was accepted' }
             Write-Output 'SD01_LOCAL=PASS independent_copy_build=PASS unknown_task_rejected=PASS unimplemented_task_rejected=PASS'
         } finally {
+            if ($pushedCopy) { Pop-Location }
             # Only remove the explicitly verified, newly created temp workspace.
             $resolved = [IO.Path]::GetFullPath($testRoot)
             $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
@@ -76,9 +79,12 @@ switch ($Task) {
     }
     default {
         if ($checks.tasks[$Task].commands.Count -eq 0) { throw "NOT_IMPLEMENTED: $Task has no checks" }
-        foreach ($command in $checks.tasks[$Task].commands) {
-            $expanded = @($command | ForEach-Object { $_.Replace('{sdk}', $sdkRoot).Replace('{repo}', $repoRoot).Replace('{python}', $PythonExecutable) })
-            Run-Checked $expanded[0] @($expanded | Select-Object -Skip 1)
-        }
+        Push-Location $sdkRoot
+        try {
+            foreach ($command in $checks.tasks[$Task].commands) {
+                $expanded = @($command | ForEach-Object { $_.Replace('{sdk}', $sdkRoot).Replace('{python}', $PythonExecutable) })
+                Run-Checked $expanded[0] @($expanded | Select-Object -Skip 1)
+            }
+        } finally { Pop-Location }
     }
 }

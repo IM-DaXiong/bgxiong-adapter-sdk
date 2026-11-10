@@ -42,7 +42,8 @@ from decimal import Decimal
 IDS = ("real-probe", "three-packages", "upload", "multi-output", "stream-events",
        "recover", "unknown-acceptance", "cancel-isolation", "replay-current",
        "profile-parity", "form-cli", "matrix", "candidate", "external-author")
-SKIP = {"target", ".bgx-sdk", "node_modules", "dist", ".git", "__pycache__", ".sdk-test-workspaces"}
+SKIP = {"target", ".bgx-sdk", "node_modules", "dist", ".git", "__pycache__", ".sdk-test-workspaces", "artifacts"}
+HISTORICAL_SDK_PREFIX = "packages/vendor-adapter-contract/v2/"
 SOURCE_SUFFIXES = {".rs", ".toml", ".lock", ".json", ".wit", ".ts", ".py", ".html"}
 
 
@@ -110,6 +111,12 @@ def safe_relative(value):
                 not any(c in p for c in ':*?<>|\x00') and not any(ord(c) < 32 for c in p)
                 for p in path.parts), "Unsafe artifact path")
     return value
+
+
+def captured_sdk_path(name):
+    """Resolve SDK-relative identity without changing retained evidence bytes."""
+    name = safe_relative(name)
+    return safe_relative(name.removeprefix(HISTORICAL_SDK_PREFIX))
 
 
 def pairs(items):
@@ -949,10 +956,13 @@ def check_form(c):
     joined = c.select(evidence["joined"])
     need(isinstance(joined.get("sourceAndBuildHashes"), dict) and bool(joined["sourceAndBuildHashes"]),
          "Browser source/built asset identities were not captured")
-    prefix = "packages/vendor-adapter-contract/v2/"
+    asset_names = set()
     for name, expected in joined["sourceAndBuildHashes"].items():
-        require(name.startswith(prefix), "Browser captured asset outside public SDK")
-        path = no_links(c.sdk / safe_relative(name[len(prefix):]))
+        name = captured_sdk_path(name)
+        require(name.startswith("tools/form-reference/") and name not in asset_names,
+                "Duplicate or out-of-scope browser captured asset")
+        asset_names.add(name)
+        path = no_links(c.sdk / name)
         require(sha(path) == expected, "Captured browser source/build asset changed")
     return {"requestSha256": request_hash, "payloadSha256": payload_hash, "browserExportMatchesCliInput": True}
 
@@ -1120,7 +1130,6 @@ def verify(root, reference, chain, sdk, artifact_roots=None):
             original = {x["path"]: x["sha256"] for x in original}
         require(isinstance(original, dict) and bool(original), "Original captured source map missing")
         captured = {}
-        prefix = "packages/vendor-adapter-contract/v2/"
         for name, digest in original.items():
             require(isinstance(name, str) and isinstance(digest, str) and re.fullmatch("[0-9a-f]{64}", digest), "Invalid original source identity")
             absolute = ordinary_path(name)
@@ -1128,8 +1137,7 @@ def verify(root, reference, chain, sdk, artifact_roots=None):
                 if not absolute.is_relative_to(c.sdk): continue
                 name = absolute.relative_to(c.sdk).as_posix()
             else:
-                name = name.replace("\\", "/")
-                if name.startswith(prefix): name = name[len(prefix):]
+                name = captured_sdk_path(name.replace("\\", "/"))
             name = safe_relative(name)
             require(name not in captured or captured[name] == digest, "Conflicting original source identity")
             captured[name] = digest

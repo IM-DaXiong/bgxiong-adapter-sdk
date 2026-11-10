@@ -2,15 +2,16 @@
 import argparse
 import json
 from pathlib import Path
-from capture_isolation import ROOT, verify
+from capture_isolation import repository_root, verify
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", required=True, type=Path)
+    parser.add_argument("--protected-root", required=True, type=Path)
     args = parser.parse_args()
     data = json.loads(args.baseline.read_text(encoding="utf-8"))
-    errors = verify(ROOT, data)
+    errors = verify(repository_root(args.protected_root), data)
     print(json.dumps({"status": "FAIL" if errors else "PASS", "errors": errors,
                       "protectedCount": len(data["protectedFiles"])}))
     raise SystemExit(1 if errors else 0)

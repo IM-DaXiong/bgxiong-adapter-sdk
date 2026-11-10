@@ -97,7 +97,7 @@
     {
       "source": "README.md",
       "target": "README.md",
-      "sha256": "935d054b6f5a1fc3665ac77b1a91c707ae6ea0ad12a3b1b4bfef1605421e41a9",
+      "sha256": "69d9e85e6cf994cd50374bcddff1ed65bfa1db88174248587517f24d7a0b5f64",
       "required": true
     },
     {
@@ -265,7 +265,7 @@
     {
       "source": "crates/reference-host/tests/six_operations.rs",
       "target": "crates/reference-host/tests/six_operations.rs",
-      "sha256": "1531376cf8dd04139a4c6c242a771fde1b32c6f80be6fe98b85a7087cd711783",
+      "sha256": "23939d813a515b9e72a3d44bdd1f35cc5d160f3afeee749c1bcecfc20db381f9",
       "required": true
     },
     {
@@ -1225,7 +1225,7 @@
     {
       "source": "tools/conformance_proofs.py",
       "target": "tools/conformance_proofs.py",
-      "sha256": "dcaaa9509201e3bf655842c7519950e44da54b5917ae72658a818707e9b75645",
+      "sha256": "bf945b3fd54e999a71250fee98153b11bbce2c048e8a476fe7e6f89bb46a927d",
       "required": true
     },
     {
@@ -1339,7 +1339,7 @@
     {
       "source": "tools/run_conformance.py",
       "target": "tools/run_conformance.py",
-      "sha256": "d6faa48b94ef315bb74e06de5964c0e44bc2918c08b1d3c80694d9fd54df245a",
+      "sha256": "2e6a6bd3ca3807c21546c29abb3628ad32bfcb96f75aa5023b128f45d27493bd",
       "required": true
     },
     {

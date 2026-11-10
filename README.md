@@ -38,6 +38,16 @@ P01—P13的代表性编译、安装关联、真实生成和回收结论按原�
 
 协议/WIT/author SDK 2.0.0 保持不变；native tools/reference-host 2.0.1 的只读 inspect/export 候选见 [受管媒体工具](RETAINED-MEDIA.zh-CN.md)。原已验执行工具独立保留，新工具的通过范围不等于整体发行通过。
 
+## 独立仓开发构建
+
+独立 checkout 使用 `rust-toolchain.toml` 固定的 Rust 与 `wasm32-wasip2`，并需要 Python 3.11+、Node 25+ 和对应本机链接工具。在任意工作目录调用 SDK 仓内的脚本，传入尚不存在的绝对输出目录，其父目录须已创建。
+
+```powershell
+pwsh -File .\tools\build_sdk.ps1 -Profile debug -OutputDirectory <absolute-new-directory>
+```
+
+输出含 `source/`、`runtime/` 和 `build-receipt.json`。回执绑定 SDK 提交、工作区状态、工具链、源码和运行文件摘要，验证范围为构建。参考宿主和 CLI 的行为验收单独运行。当前独立仓迁移尚未切换比格熊主程序消费入口。
+
 ### Media slot reference carriers
 
 `mediaSlots.inputPointer` addresses an input field whose operation input schema declares a media ID string, a single-key `{ "mediaId": "..." }` object, or an array of these references. For example, `/source/mediaId` can select a string and `/referenceMediaIds` a string array; existing object references remain valid. This does not coerce inputs or infer paths. All forms share the same declared count bounds, duplicate rejection, request.media ID closure and mediaKind validation. Broker checks still require live handles with matching package, binding, request ownership and measured media facts. A media ID is never a file path or a grant of additional filesystem access.

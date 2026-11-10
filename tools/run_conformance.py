@@ -359,7 +359,10 @@ def typed_suite_command(command, cwd, sdk_at_execution, suite):
 def checkpoint_sources(context, selector, needed, bindings):
     """Verify retained Git commit/tree/blob objects without invoking Git."""
     proof = closed(context.select(selector), ("kind", "commit", "commitObject", "trees", "files"), "checkpoint source proof")
-    require(proof["kind"] == "REVIEWED_GIT_CHECKPOINT_V1" and re.fullmatch(r"[0-9a-f]{40}", proof["commit"]), "Invalid Git checkpoint identity")
+    prefixes = {"REVIEWED_GIT_CHECKPOINT_V1": joined_module().HISTORICAL_SDK_PREFIX,
+                "REVIEWED_GIT_CHECKPOINT_V2": ""}
+    require(proof["kind"] in prefixes and re.fullmatch(r"[0-9a-f]{40}", proof["commit"]), "Invalid Git checkpoint identity")
+    prefix = prefixes[proof["kind"]]
     def payload(reference, kind, oid):
         data = context.file(reference).read_bytes()
         require(hashlib.sha1(kind.encode() + b" " + str(len(data)).encode() + b"\0" + data).hexdigest() == oid, "Git object identity mismatch")
@@ -401,7 +404,7 @@ def checkpoint_sources(context, selector, needed, bindings):
         require(hashlib.sha256(raw).hexdigest() == row["checkoutSha256"], "Checkout encoding/hash mismatch")
         files[row["path"]] = row["checkoutSha256"]
     for row in needed:
-        require(files.get("packages/vendor-adapter-contract/v2/" + row["path"]) == row["sha256"], "Current compiled source differs from checkpoint: " + row["path"])
+        require(files.get(prefix + row["path"]) == row["sha256"], "Current compiled source differs from checkpoint: " + row["path"])
     for binding in bindings:
         require(files.get(binding["path"]) == binding["sha256"], "Original execution/source report is not bound to checkpoint")
     return proof["commit"]
@@ -441,7 +444,6 @@ def verify_reviewed_suite(root, reference, proof, suite_id, suite, artifact_root
     require(review["kind"] == "SUITE_SOURCE_REVIEW_V1" and review["sources"] == now and review["sourceDigest"] == object_digest(now), "Reviewed compiled source closure changed")
     captured = context.select(review["capturedSource"])
     require(isinstance(captured, dict) and bool(captured), "Original measured source map missing")
-    prefix = "packages/vendor-adapter-contract/v2/"
     current = {row["path"]: row["sha256"] for row in now}; captured_names = set()
     for name, measured in captured.items():
         absolute = joined.ordinary_path(name)
@@ -449,8 +451,7 @@ def verify_reviewed_suite(root, reference, proof, suite_id, suite, artifact_root
             at_execution = joined.ordinary_path(proof["sdkAtExecution"])
             if not absolute.is_relative_to(at_execution): continue
             name = absolute.relative_to(at_execution).as_posix()
-        else: name = name.replace("\\", "/")
-        if name.startswith(prefix): name = name[len(prefix):]
+        else: name = joined.captured_sdk_path(name.replace("\\", "/"))
         if name in current:
             require(current[name] == measured, "Measured compiled source changed: " + name); captured_names.add(name)
     require(bool(captured_names), "No compiled input was measured in original report")
@@ -564,14 +565,14 @@ def reviewed_suite_self_test(root, definitions):
         return oid, ref(path)
     source = "protocol/schema-policy.json"; raw = (SDK / source).read_bytes()
     blob, reference = retain("blob", raw)
-    row = {"path": "packages/vendor-adapter-contract/v2/" + source, "sha256": hashlib.sha256(raw).hexdigest(),
+    row = {"path": source, "sha256": hashlib.sha256(raw).hexdigest(),
            "oid": blob, "file": reference, "checkoutEncoding": "IDENTITY", "checkoutSha256": hashlib.sha256(raw).hexdigest()}
     trees = []; child = blob
     for index, part in enumerate(reversed(row["path"].split("/"))):
         oid, reference = retain("tree", ("100644" if index == 0 else "40000").encode() + b" " + part.encode() + b"\0" + bytes.fromhex(child))
         trees.append({"oid": oid, "file": reference}); child = oid
     commit, reference = retain("commit", b"tree " + child.encode() + b"\n\nInfrastructure fixture, not actual SDK execution\n")
-    proof = {"kind": "REVIEWED_GIT_CHECKPOINT_V1", "commit": commit, "commitObject": reference, "trees": trees, "files": [row]}
+    proof = {"kind": "REVIEWED_GIT_CHECKPOINT_V2", "commit": commit, "commitObject": reference, "trees": trees, "files": [row]}
     path = folder / "checkpoint.json"; claim_json(path, proof)
     context = joined_module().Context(root, SDK)
     selected = {"file": ref(path), "pointer": ""}
