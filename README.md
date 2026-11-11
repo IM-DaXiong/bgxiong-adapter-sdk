@@ -53,3 +53,25 @@ pwsh -File .\tools\build_sdk.ps1 -Profile debug -OutputDirectory <absolute-new-d
 ### Media slot reference carriers
 
 `mediaSlots.inputPointer` addresses an input field whose operation input schema declares a media ID string, a single-key `{ "mediaId": "..." }` object, or an array of these references. For example, `/source/mediaId` can select a string and `/referenceMediaIds` a string array; existing object references remain valid. This does not coerce inputs or infer paths. All forms share the same declared count bounds, duplicate rejection, request.media ID closure and mediaKind validation. Broker checks still require live handles with matching package, binding, request ownership and measured media facts. A media ID is never a file path or a grant of additional filesystem access.
+
+## 关于比格熊 / About
+
+比格熊数字导演工作站是装在本机的 AI 导演工具。本仓库只放适配协议、作者工具和参考宿主。桌面客户端的源码在开发室仓库，不在这里。
+
+- 官网 / 下载：[https://www.bgxiong.com](https://www.bgxiong.com)
+- 版本说明：[https://www.bgxiong.com/client/version.html](https://www.bgxiong.com/client/version.html)
+- 主程序开发仓：[https://github.com/IM-DaXiong/bgxiong-ai-story-dev](https://github.com/IM-DaXiong/bgxiong-ai-story-dev)。这是开发室里的产品仓库，需要授权才能打开。
+- 公开开发文档：[https://github.com/IM-DaXiong/bgxiong-ai-story-docs](https://github.com/IM-DaXiong/bgxiong-ai-story-docs)
+
+## 已接入的第三方适配器
+
+第三方适配器是本 SDK 的消费方：各厂商、云端和工作流包都按这里的协议制作，再由比格熊导入运行。包的源码、下载和每包实际验收都在适配器仓，不在本仓库重复一份。
+
+- 适配器仓：[https://github.com/IM-DaXiong/bgxiong-third-party-adapters](https://github.com/IM-DaXiong/bgxiong-third-party-adapters)
+- 当前包和下载从该仓 [README](https://github.com/IM-DaXiong/bgxiong-third-party-adapters/blob/main/README.md) 进入。仓库里写明已经在应用中实测的，包括 Wan 2.2 S2V，以及 MiniMax H3-Image 的安装、文生图、参考图编辑、自由画布、片段画布和同任务恢复。其余包以该仓 README 和对应验收记录里的范围为准，未写实测的不算已成功出片。
+
+## 联系我们 / Contact
+
+公众号搜索 **天途影像**，可在后台私信联系。
+
+WeChat Official Account: search **天途影像** and message us in the backend.
