@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "63337575c6e161850a4d85f39d5724a11ee817e1e631b7e06d0b11de559098ce",
+      "sha256": "c92795cbc625afe22d21fe64cb8c968275d5cfcb6afa8043d8f9ee6f5f960f2f",
       "required": true
     },
     {
@@ -103,7 +103,7 @@
     {
       "source": "README.md",
       "target": "README.md",
-      "sha256": "d2e50b396e27028530ceb4c0bc72ed6e46352bb7b83c66978493c9ad094bab2a",
+      "sha256": "c358484f5d0c35f3c77759ba2b4abff15c44af48dcfaf160982ae9d10e67b065",
       "required": true
     },
     {
