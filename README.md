@@ -1,5 +1,7 @@
 # 统一开放适配标准与 SDK 开发者预览版
 
+仓库：[bgxiong-adapter-sdk](https://github.com/IM-DaXiong/bgxiong-adapter-sdk)（公开）。说明文档采用 [MIT](LICENSE)。
+
 2026-10-29：新增**SDK发行2.1.1全景候选**，见[公开图片投影合同](profiles/image-projection-v1/README.zh-CN.md)及[英文](profiles/image-projection-v1/README.en.md)。发行包组合新增profile和native校验/工具；author SDK、执行协议与WIT ABI沿用原身份。中立同步/异步样例通过`image-projection` feature演示，CLI/恢复/独立作者验收与应用安装版状态分开。本段优先于以下历史预览版发行叙述，未据此声明全SDK治理SDK_READY。
 
 合同版本 2.0.0 · 安装发行 0.6.1030 · 2026-10-24。当前交付定位为 **ComfyUI 工作流作者开发包·开发者预览版**。先读 [预览版状态与使用边界](DEVELOPER-PREVIEW.zh-CN.md)，再读 [作者指南](AUTHORING.zh-CN.md)。本次SDK版本对齐只修订资料和发行元数据，SDK接口、schema、WIT和执行工具不变；主程序修复与实际验收以0.6.1030发行回执为准。

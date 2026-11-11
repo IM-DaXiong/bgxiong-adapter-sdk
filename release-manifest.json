@@ -37,13 +37,13 @@
     {
       "source": "AUTHORING.zh-CN.md",
       "target": "AUTHORING.zh-CN.md",
-      "sha256": "bc7ccd8e6347a14525cd7f3d5eedf4a174a10b192c82130639e861266ed2e190",
+      "sha256": "5bb764a3989c40f5f246afd8fad1171214c49f4e9ac8694aef32bb559810ed85",
       "required": true
     },
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "ef9b2e9c5fafca1ca0c0d9a98da2f6c0c09ddd853e50ce855efdd6a28df84ff9",
+      "sha256": "63337575c6e161850a4d85f39d5724a11ee817e1e631b7e06d0b11de559098ce",
       "required": true
     },
     {
@@ -73,7 +73,7 @@
     {
       "source": "DEVELOPER-PREVIEW.zh-CN.md",
       "target": "DEVELOPER-PREVIEW.zh-CN.md",
-      "sha256": "557b4a18c4cbaee60ccf494e9c4d0beefefc66073887ed355172b8a9a3aad884",
+      "sha256": "8aed883e63e3c9e11ee4b1f9a47aea9af933709d7e005c1795c42b317f70a11b",
       "required": true
     },
     {
@@ -85,7 +85,13 @@
     {
       "source": "HOST-INTEGRATION.zh-CN.md",
       "target": "HOST-INTEGRATION.zh-CN.md",
-      "sha256": "cd2653b6a9bca175f2b602a10908ea2f8ba890c8c222ee5d6251c78b42ebefeb",
+      "sha256": "32b2974d27b901174289e6d5ff06446a408a397b5b4addbc2abd4550c8a251fd",
+      "required": true
+    },
+    {
+      "source": "LICENSE",
+      "target": "LICENSE",
+      "sha256": "9b4522d4cbbed5a1a7e9f0935745c625951c8bf540fe4e469bfcce52f548b9b8",
       "required": true
     },
     {
@@ -97,7 +103,7 @@
     {
       "source": "README.md",
       "target": "README.md",
-      "sha256": "69d9e85e6cf994cd50374bcddff1ed65bfa1db88174248587517f24d7a0b5f64",
+      "sha256": "fc0c8eaa8d7b068d3bb072ca5bd01a111caac003b0eec3ac98884725427ce0bf",
       "required": true
     },
     {
@@ -1123,7 +1129,7 @@
     {
       "source": "templates/rust/README.md",
       "target": "templates/rust/README.md",
-      "sha256": "6e19e0002777b297f92f3c84814d3be2b94496325184e98a693f3d776992bf35",
+      "sha256": "7359afcf89e8e2fc32e6e5e1b4a1ab95c1e4d53a5f329478731b9722f27d728b",
       "required": true
     },
     {
