@@ -10,7 +10,7 @@ bgx-adapter-v2-validator = { path = "../validator" }
 bgx-adapter-v2-ports = { path = "../ports" }
 bgx-adapter-v2-transport = { path = "../transport" }
 serde.workspace = true
-serde_json = { workspace = true, features = ["arbitrary_precision"] }
+serde_json.workspace = true
 sha2.workspace = true
 hex.workspace = true
 uuid.workspace = true
