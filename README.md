@@ -56,11 +56,10 @@ pwsh -File .\tools\build_sdk.ps1 -Profile debug -OutputDirectory <absolute-new-d
 
 ## 关于比格熊 / About
 
-比格熊数字导演工作站是装在本机的 AI 导演工具。本仓库只放适配协议、作者工具和参考宿主。桌面客户端的源码在开发室仓库，不在这里。
+比格熊数字导演工作站是装在本机的 AI 导演工具。本仓库只放适配协议、作者工具和参考宿主。桌面客户端源码不在本仓库，公开页面也不提供主程序仓库地址。
 
 - 官网 / 下载：[https://www.bgxiong.com](https://www.bgxiong.com)
 - 版本说明：[https://www.bgxiong.com/client/version.html](https://www.bgxiong.com/client/version.html)
-- 主程序开发仓：[https://github.com/IM-DaXiong/bgxiong-ai-story-dev](https://github.com/IM-DaXiong/bgxiong-ai-story-dev)。这是开发室里的产品仓库，需要授权才能打开。
 - 公开开发文档：[https://github.com/IM-DaXiong/bgxiong-ai-story-docs](https://github.com/IM-DaXiong/bgxiong-ai-story-docs)
 
 ## 已接入的第三方适配器

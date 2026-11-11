@@ -2,7 +2,7 @@
 
 - **公开与文档许可（用户2026-11-11）**：本仓 GitHub 公开，地址 `https://github.com/IM-DaXiong/bgxiong-adapter-sdk`。说明文档采用根目录 `LICENSE` 的 MIT 许可。适配器包与主程序许可不在本仓改写。
 - **四仓平级（用户2026-11-10）**：团队多仓研发先定位同级 `../bgxiong-ai-story` 的实际 Git 根 H，以 parent(H) 为开发根。目录固定为 bgxiong-ai-story、bgxiong-third-party-adapters、bgxiong-adapter-sdk、bgxiong-content-skills，不写死盘符，不嵌套，不另设真源。
-- 缺仓从 `https://github.com/IM-DaXiong/` 下对应 Git 仓 clone 到准确同级目录。主仓远程名为 `bgxiong-ai-story-dev.git`，本地目录仍为 bgxiong-ai-story；其它仓远程名与目录名一致。核 Git 身份，目标占用/远程不可达保留现场报阻断，不用空目录冒充。先读各仓 AGENTS.md 与主仓[四仓规范](../bgxiong-ai-story/docs/dev/guides/20261107-GUIDE-三仓平级与创作Skill唯一治理目录.md)。
+- 缺公开仓时从对应公开 Git 仓 clone 到准确同级目录。主程序仓库不公开，本文件不写它的远程地址；已有本地 `../bgxiong-ai-story` 时再读该仓规范。其它公开仓远程名与目录名一致。核 Git 身份，目标占用/远程不可达保留现场报阻断，不用空目录冒充。先读各仓 AGENTS.md 与主仓[四仓规范](../bgxiong-ai-story/docs/dev/guides/20261107-GUIDE-三仓平级与创作Skill唯一治理目录.md)。
 - **主程序驱动 SDK**：比格熊提出需求，现有 SDK 不能满足时在本仓实现；主程序默认同步最新 SDK 并联合验证。每批编译前核远程最新并正常合并，固定本批输入后构建；锁记录实际提交、组件版本与产物摘要，不是长期停在旧版的门槛。失败不得静默回退旧 SDK，构建期间不得换源码。
 - 本仓是公共适配协议、schema、WIT、validator、运行内核、参考宿主、CLI/worker 与作者工具的唯一开发源。平台实现归适配器仓；产品 UI、任务、业务数据库、账号/画布归主仓；创作 Skill 归内容仓。消费副本不得反向维护。
 - **独立性**：本仓编译/测试/参考宿主不能依赖主程序源码、数据库或安装目录。外部使用者只构建 SDK 时无需其它三仓；四仓恢复约定用于团队多仓研发，不能变成 SDK 本身的构建前置。
