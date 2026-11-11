@@ -26,6 +26,56 @@ fn setup() -> (tempfile::TempDir, DevelopmentWorkspace, MediaBroker) {
     let broker = MediaBroker::new(workspace.clone(), Duration::from_secs(60), None).unwrap();
     (directory, workspace, broker)
 }
+
+/// Real encoded files and the deployed ffprobe are supplied explicitly. Every
+/// result is retained before asserting, including baseline classification errors.
+#[test]
+#[ignore = "requires BGX_AUDIO_FIXTURES, BGX_REAL_FFPROBE and BGX_AUDIO_FACTS_OUT"]
+fn real_common_audio_formats_import_and_rehydrate() {
+    use serde_json::{json, Value};
+    let fixtures: Value = serde_json::from_slice(&fs::read(std::env::var("BGX_AUDIO_FIXTURES").unwrap()).unwrap()).unwrap();
+    let tool = ProbeTool { executable: std::env::var("BGX_REAL_FFPROBE").unwrap().into(), timeout: Duration::from_secs(30), frame_timestamps: false };
+    let (directory, workspace, broker) = setup();
+    broker.close().unwrap();
+    let mut broker = MediaBroker::new(workspace.clone(), Duration::from_secs(300), Some(tool.clone())).unwrap();
+    let owner = scope();
+    let control = Control::new(None);
+    let mut rows = vec![];
+    let mut leases = vec![];
+    for (index, fixture) in fixtures.as_array().unwrap().iter().enumerate() {
+        // No suffix: detection must depend on bytes, never the supplied name.
+        let source = directory.path().join(format!("original-{index}"));
+        fs::copy(fixture["path"].as_str().unwrap(), &source).unwrap();
+        let id = format!("audio-{index}");
+        match broker.import_file(&owner, &id, &source, "audio", &control) {
+            Ok(lease) => {
+                let bytes = fs::read(&source).unwrap();
+                assert_ne!(fixture["reject"], true, "Invalid fixture was accepted: {}", fixture["name"]);
+                let measured = inspect_file(&source, &id, "audio", Some(&tool), &control).unwrap();
+                assert_eq!(serde_json::to_value(&measured).unwrap(), serde_json::to_value(&lease.stat).unwrap());
+                assert_eq!(lease.stat.r#sha256, fixture["sha256"].as_str().unwrap());
+                let chunk_size = resource_policy()["limits"]["maxMediaChunkBytes"].as_u64().unwrap() as usize;
+                for (index, chunk) in bytes.chunks(chunk_size).enumerate() {
+                    assert_eq!(broker.read(&owner, &lease.handle, (index * chunk_size) as u64, chunk.len(), &control).unwrap(), chunk);
+                }
+                assert!(lease.stat.duration_ms.as_ref().unwrap().parse::<u64>().unwrap() > 0);
+                rows.push(json!({"name":fixture["name"],"stat":lease.stat,"imported":true}));
+                leases.push(lease);
+            }
+            Err(error) => rows.push(json!({"name":fixture["name"],"error":error,"imported":false,"expectedRejection":fixture["reject"] == true})),
+        }
+    }
+    broker.close().unwrap();
+    let mut reopened = MediaBroker::new(DevelopmentWorkspace::open(workspace.root()).unwrap(), Duration::from_secs(300), Some(tool)).unwrap();
+    for lease in &leases {
+        let restored = reopened.rehydrate(&owner, &lease.identity, &control).unwrap();
+        assert_eq!(serde_json::to_value(&restored.stat).unwrap(), serde_json::to_value(&lease.stat).unwrap());
+        assert_ne!(restored.handle, lease.handle);
+    }
+    let output = std::env::var("BGX_AUDIO_FACTS_OUT").unwrap();
+    File::options().write(true).create_new(true).open(output).unwrap().write_all(&serde_json::to_vec_pretty(&rows).unwrap()).unwrap();
+    assert!(rows.iter().all(|row| row["imported"] == true || row["expectedRejection"] == true), "Some real audio formats failed; inspect the retained facts");
+}
 fn image(path: &Path, format: image::ImageFormat) {
     let pixels = image::RgbImage::from_pixel(3, 2, image::Rgb([40, 50, 60]));
     pixels.save_with_format(path, format).unwrap();

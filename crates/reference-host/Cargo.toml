@@ -1,11 +1,12 @@
 [package]
 name = "bgx-adapter-v2-reference-host"
-version = "2.1.2"
+version = "2.1.3"
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
+bgx-adapter-v2-media = { path = "../media" }
 bgx-adapter-v2-validator = { path = "../validator" }
 bgx-adapter-v2-ports = { path = "../ports" }
 bgx-adapter-v2-transport = { path = "../transport" }

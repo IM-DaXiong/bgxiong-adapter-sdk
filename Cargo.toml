@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sdk/rust", "crates/validator", "crates/ports", "crates/runtime", "crates/transport", "crates/reference-host", "crates/tools"]
+members = ["sdk/rust", "crates/validator", "crates/ports", "crates/runtime", "crates/transport", "crates/reference-host", "crates/media", "crates/tools"]
 exclude = ["templates", "examples"]
 [workspace.package]
 version = "2.0.0"

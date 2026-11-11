@@ -74,3 +74,9 @@ pwsh -File .\tools\build_sdk.ps1 -Profile debug -OutputDirectory <absolute-new-d
 公众号搜索 **天途影像**，可在后台私信联系。
 
 WeChat Official Account: search **天途影像** and message us in the backend.
+
+## Audio inputs (SDK 2.1.3)
+
+The standalone `bgx-adapter-v2-media` crate supplies `inspect_file`, the same measured-media implementation used by the reference host. Hosts can consume it without the reference host database dependency. Explicit local ffprobe configuration is required for container-aware audio inspection. WAV/RF64, MP3, FLAC, M4A/AAC/ALAC, ADTS AAC, Vorbis/Opus, ASF/WMA, AIFF, AMR-NB/WB, APE and audio WebM/Matroska were exercised with real files; attached pictures do not turn audio into video. Original bytes and strict lease identity remain unchanged. Playlists and audio requests containing real video streams are rejected. This does not certify any vendor upload endpoint or model.
+
+Real fixture regression: set `BGX_AUDIO_FIXTURES` to a JSON array of `{name,path,sha256}` (negative cases add `reject:true`), `BGX_REAL_FFPROBE` to an explicit binary, and `BGX_AUDIO_FACTS_OUT` to a new output path; run `cargo test -p bgx-adapter-v2-reference-host --test media real_common_audio_formats_import_and_rehydrate -- --ignored`. The test imports files without suffixes, checks the host inspector against broker facts, reads in bounded chunks and rehydrates after restart. Media fixture contents are not part of the SDK release.

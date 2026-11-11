@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.1.2",
+  "sdkRelease": "2.1.3",
   "status": "NOT_RUN",
   "sealed": false,
   "sdkReady": false,
@@ -18,7 +18,7 @@
   "mainApplicationV2Import": "NOT_SUPPORTED",
   "publication": "NOT_PUBLISHED",
   "projectLicense": "LicenseRef-Proprietary",
-  "note": "Candidate identity sdkRelease=2.1.2 matches release-manifest.json (video-speech and operation-preflight profiles with native tooling). Protocol/WIT/author SDK identity remains 2.0.0. G00-G06 and SDK_READY remain NOT_RUN/unsealed (sealed=false, sdkReady=false). NOT_ADOPTED/NOT_SUPPORTED describe the standalone full-candidate governance, not the installed workflow adapter feature. See developerPreview and DEVELOPER-PREVIEW.zh-CN.md. Do not claim full SDK sealed readiness from this file alone.",
+  "note": "Candidate identity sdkRelease=2.1.3 matches release-manifest.json (video-speech and operation-preflight profiles with native tooling). Protocol/WIT/author SDK identity remains 2.0.0. G00-G06 and SDK_READY remain NOT_RUN/unsealed (sealed=false, sdkReady=false). NOT_ADOPTED/NOT_SUPPORTED describe the standalone full-candidate governance, not the installed workflow adapter feature. See developerPreview and DEVELOPER-PREVIEW.zh-CN.md. Do not claim full SDK sealed readiness from this file alone.",
   "scope": "STANDALONE_SDK_FULL_CONFORMANCE",
   "developerPreview": {
     "channel": "DEVELOPER_PREVIEW",
