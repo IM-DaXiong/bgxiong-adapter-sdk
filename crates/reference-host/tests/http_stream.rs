@@ -489,3 +489,70 @@ async fn before_send_redacts_unregistered_query_values_without_changing_request(
     );
     assert!(!serde_json::to_string(&http.audit().unwrap()).unwrap().contains("unregistered"));
 }
+
+#[tokio::test]
+async fn before_send_redacts_json_source_url_without_changing_request_bytes() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let origin = format!("http://{}", listener.local_addr().unwrap());
+    let source = "https://user:pw@example.invalid/a%20b?k%2Bey=synthetic%2Bsecret&k%2Bey=&flag#private";
+    let prompt = "https://example.invalid/ is the subject of this sentence";
+    let plain = "https://example.invalid/a%20b";
+    let body = format!(r#"{{"zPrompt":"{prompt}","contents":[{{"type":"base_video","url":"{source}"}}],"aPlain":"{plain}"}}"#);
+    let expected = body.clone();
+    let server = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut headers = Vec::new();
+        while !headers.ends_with(b"\r\n\r\n") {
+            assert!(headers.len() < 8192);
+            headers.push(socket.read_u8().await.unwrap());
+        }
+        let headers = String::from_utf8(headers).unwrap();
+        assert_eq!(headers.lines().next(), Some("POST /create HTTP/1.1"));
+        let content_length = headers
+            .lines()
+            .filter_map(|line| line.split_once(':'))
+            .find(|(key, _)| key.eq_ignore_ascii_case("content-length"))
+            .unwrap().1.trim().parse::<usize>().unwrap();
+        assert_eq!(content_length, expected.len());
+        let mut received = vec![0; content_length];
+        socket.read_exact(&mut received).await.unwrap();
+        assert_eq!(received, expected.as_bytes());
+        socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await.unwrap();
+    });
+    let (_workspace, http) = broker(&origin);
+    let ready = Arc::new(Notify::new());
+    let allow = Arc::new(Notify::new());
+    let records = Arc::new(Mutex::new(Vec::new()));
+    let sink = Arc::new(AuditGate {
+        ready: ready.clone(),
+        allow: allow.clone(),
+        reject: false,
+        records: records.clone(),
+    });
+    let http = Arc::try_unwrap(http).ok().unwrap().with_before_send(sink, "test/edit".into());
+    let mut plan = serde_json::to_value(request(&format!("{origin}/create"), 5000)).unwrap();
+    plan["method"] = json!("POST");
+    plan["headers"] = json!([{"name":"Content-Type","value":"application/json"}]);
+    plan["body"] = json!({"kind":"bytes","bytes":body.into_bytes()});
+    let plan = serde_json::from_value(plan).unwrap();
+    let job = tokio::spawn(async move { http.execute(&plan, None, &Control::new(None)).await });
+    timeout(Duration::from_secs(3), ready.notified()).await.unwrap();
+    allow.notify_one();
+    job.await.unwrap().unwrap();
+    timeout(Duration::from_secs(3), server).await.unwrap().unwrap();
+
+    let records = records.lock().unwrap();
+    assert_eq!(records.len(), 1);
+    let record = &records[0];
+    assert!(!record.to_string().contains("synthetic"), "signed source leaked into before-send");
+    let redacted = record["body"]["contents"][0]["url"].as_str().unwrap();
+    let url = url::Url::parse(redacted).unwrap();
+    assert_eq!(url.path(), "/a%20b");
+    assert_eq!(url.query_pairs().into_owned().collect::<Vec<_>>(),
+        ["k+ey", "k+ey", "flag"].map(|key| (key.to_owned(), "[REDACTED]".to_owned())));
+    assert!(url.fragment().is_none());
+    assert!(url.username().is_empty());
+    assert!(url.password().is_none());
+    assert_eq!(record["body"]["zPrompt"], prompt);
+    assert_eq!(record["text"], json!([prompt, "base_video", redacted, plain]));
+}

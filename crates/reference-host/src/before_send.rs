@@ -69,12 +69,16 @@ impl<'de> serde::de::Visitor<'de> for Texts<'_> {
     }
 }
 pub(crate) fn redact_url(raw: &str, vault: &CredentialVault) -> String {
-    let Ok(mut url) = url::Url::parse(raw) else {
+    let Ok(url) = url::Url::parse(raw) else {
         return "[INVALID_URL]".into();
     };
     if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() {
         return "[INVALID_URL]".into();
     }
+    redact_parsed_url(url, vault)
+}
+
+fn redact_parsed_url(mut url: url::Url, vault: &CredentialVault) -> String {
     url.set_fragment(None);
     if url.set_password(None).is_err() || url.set_username("").is_err() {
         return "[INVALID_URL]".into();
@@ -128,6 +132,54 @@ pub(crate) fn redact(value: &mut Value, vault: &CredentialVault) {
         _ => {}
     }
 }
+
+fn redact_json_url(text: &mut String, vault: &CredentialVault) {
+    let Some((scheme, _)) = text.split_once("://") else {
+        return;
+    };
+    if !(scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https"))
+        || text.chars().any(|ch| ch.is_whitespace() || ch.is_control())
+    {
+        return;
+    }
+    let Ok(url) = url::Url::parse(text) else {
+        return;
+    };
+    if url.query().is_some()
+        || url.fragment().is_some()
+        || !url.username().is_empty()
+        || url.password().is_some()
+    {
+        *text = redact_parsed_url(url, vault);
+    }
+}
+
+fn redact_json_urls(value: &mut Value, vault: &CredentialVault) {
+    match value {
+        Value::String(text) => redact_json_url(text, vault),
+        Value::Array(values) => values.iter_mut().for_each(|v| redact_json_urls(v, vault)),
+        Value::Object(values) => values.values_mut().for_each(|v| redact_json_urls(v, vault)),
+        _ => {}
+    }
+}
+
+pub(crate) struct AuditBody {
+    pub value: Value,
+    pub text: Vec<String>,
+    parsed_json: bool,
+}
+
+impl AuditBody {
+    pub(crate) fn redact_urls(&mut self, vault: &CredentialVault) {
+        if self.parsed_json {
+            redact_json_urls(&mut self.value, vault);
+            for text in &mut self.text {
+                redact_json_url(text, vault);
+            }
+        }
+    }
+}
+
 async fn media_description(access: &MediaAccess, handle: &str) -> Result<Value> {
     let handle = handle.to_owned();
     access
@@ -137,35 +189,37 @@ async fn media_description(access: &MediaAccess, handle: &str) -> Result<Value> 
         })
         .await
 }
-/// Preserve JSON string values/plain UTF-8 exactly. Binary uses measured identity.
+/// Capture an audit-only projection. Binary uses measured identity.
 pub(crate) async fn body(
     plan: &Value,
     access: &MediaAccess,
     control: &Control,
-) -> Result<(Value, Vec<String>)> {
+) -> Result<AuditBody> {
     let body = &plan["body"];
     let mut text = vec![];
+    let mut parsed_json = false;
     let value = match body["kind"].as_str() {
         Some("none") => Value::Null,
         Some("bytes") => {
             let bytes: Vec<u8> = serde_json::from_value(body["bytes"].clone())
                 .map_err(|_| error("INVALID_INPUT", "Invalid outbound byte body"))?;
             match std::str::from_utf8(&bytes) {
-                Ok(s) => {
-                    let value = serde_json::from_str::<Value>(s)
-                        .unwrap_or_else(|_| Value::String(s.to_owned()));
-                    if serde_json::from_str::<Value>(s).is_ok() {
+                Ok(s) => match serde_json::from_str::<Value>(s) {
+                    Ok(value) => {
                         use serde::de::DeserializeSeed;
                         Texts(&mut text)
                             .deserialize(&mut serde_json::Deserializer::from_str(s))
                             .map_err(|_| {
                                 error("INVALID_INPUT", "Cannot project JSON audit text")
                             })?;
-                    } else {
-                        text.push(s.to_owned());
+                        parsed_json = true;
+                        value
                     }
-                    value
-                }
+                    Err(_) => {
+                        text.push(s.to_owned());
+                        Value::String(s.to_owned())
+                    }
+                },
                 Err(_) => json!({"sha256":hash_bytes(&bytes),"byteLength":bytes.len().to_string()}),
             }
         }
@@ -188,5 +242,9 @@ pub(crate) async fn body(
         }
         _ => return Err(error("INVALID_INPUT", "Unknown outbound body")),
     };
-    Ok((value, text))
+    Ok(AuditBody {
+        value,
+        text,
+        parsed_json,
+    })
 }

@@ -351,17 +351,18 @@ impl HttpBroker {
                 }
                 self.policy.check(self.policy.scope())?;
                 if let Some((sink, operation_id)) = &self.before_send {
-                    let (body, text) = crate::before_send::body(&plan, &self.media, &control).await?;
+                    let mut audit_body = crate::before_send::body(&plan, &self.media, &control).await?;
                     let index = self.call_index.fetch_add(1, Ordering::SeqCst) + 1;
-                    let mut record = json!({"schemaVersion":1,"type":"before_send",
-                        "exchangeId":uuid::Uuid::new_v4().to_string(),"requestId":self.media.scope.request_id,
-                        "callIndex":index,"operationId":operation_id,"method":plan["method"],
-                        "url":plan["url"],"body":body,"text":text});
-                    {
+                    let record = {
                         let vault = self.credentials.lock().map_err(|_| error("INTERNAL_ERROR", "Credential audit lock failed"))?;
-                        record["url"] = json!(crate::before_send::redact_url(raw, &vault));
+                        audit_body.redact_urls(&vault);
+                        let mut record = json!({"schemaVersion":1,"type":"before_send",
+                            "exchangeId":uuid::Uuid::new_v4().to_string(),"requestId":self.media.scope.request_id,
+                            "callIndex":index,"operationId":operation_id,"method":plan["method"],
+                            "url":crate::before_send::redact_url(raw, &vault),"body":audit_body.value,"text":audit_body.text});
                         crate::before_send::redact(&mut record, &vault);
-                    }
+                        record
+                    };
                     // This await is inside guarded(): cancellation/deadline/revocation still apply.
                     sink.persist(&record).await?;
                     self.policy.check(self.policy.scope())?;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.1.4",
+  "sdkRelease": "2.1.5",
   "projectLicense": "LicenseRef-Proprietary",
   "purpose": "Exact candidate source/assets allowlist. Null is pending generation, never a successful hash. Export refuses null/missing/changed inputs; refresh hashes only for these already enumerated exact paths.",
   "binaryInputs": {
@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "71c9e173cf464d1edcbc44032128a8ccd0e80d56b3fa5f6cade3feb56eedb43e",
+      "sha256": "8cf24a3030366a78202312659e7ef21105e6bd1348dcc5884afcf15dd0db4a17",
       "required": true
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "Cargo.lock",
       "target": "Cargo.lock",
-      "sha256": "f877375a907932902412e0285df2fb28e5e768f26e9dce0bc033a20814d4ca0f",
+      "sha256": "a6fa95be0d935948403e6a368163eab1a3f7a4c39fe5c3e24cad566840f5b188",
       "required": true
     },
     {
@@ -85,7 +85,7 @@
     {
       "source": "HOST-INTEGRATION.zh-CN.md",
       "target": "HOST-INTEGRATION.zh-CN.md",
-      "sha256": "594168c32cfa7351c95ce345d0c905216cc961e5915c175655bcc79d2ca6f290",
+      "sha256": "d06931d6da952d79b95c060a20c1f71d0a5764c97023f32938557e3184c76839",
       "required": true
     },
     {
@@ -139,13 +139,13 @@
     {
       "source": "crates/reference-host/Cargo.toml",
       "target": "crates/reference-host/Cargo.toml",
-      "sha256": "feab7dbcf7ada0402bc19ca2c609ba4d2a96e20cde1c67dc2544d121f3a9a67d",
+      "sha256": "025b5cb3b7a6dd3f8d89c8546263d02a5d67e5fce072c56ce72a951838674451",
       "required": true
     },
     {
       "source": "crates/reference-host/src/before_send.rs",
       "target": "crates/reference-host/src/before_send.rs",
-      "sha256": "ea902eb1be0ff1c8151ffc5f9905c2bb6823e1d7af34b10cef41a92a833868cd",
+      "sha256": "0251e74eb242357251d50a361e28eb804c28c2c2f1469cb5ba70212827887f98",
       "required": true
     },
     {
@@ -187,7 +187,7 @@
     {
       "source": "crates/reference-host/src/http.rs",
       "target": "crates/reference-host/src/http.rs",
-      "sha256": "41fbe6d42bbd4665be281fa87c7d697a9c61d9501b2e7ec2a741d1ed2ff74b18",
+      "sha256": "64713daf5d5c52cb592582a51e6310ee93fb0585b022ef36815ddf0b18c48ff9",
       "required": true
     },
     {
@@ -241,7 +241,7 @@
     {
       "source": "crates/reference-host/tests/http_stream.rs",
       "target": "crates/reference-host/tests/http_stream.rs",
-      "sha256": "352d443c76776357d07f555d163cfa018c8e094505fd95170dc55f307926ae9c",
+      "sha256": "5e7269efc879bffa31d00f44d3839a324dddac4b36cb5a0296a2bd08fd9dd933",
       "required": true
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "crates/tools/Cargo.toml",
       "target": "crates/tools/Cargo.toml",
-      "sha256": "3a75ec8c69116ecd5c6ed9d9280041608f2089e715bba86326598138524e364e",
+      "sha256": "22891dc5ab91fe79a3e0ba5e84f7545222caaaa13ef3939def58388e9ee267d0",
       "required": true
     },
     {
