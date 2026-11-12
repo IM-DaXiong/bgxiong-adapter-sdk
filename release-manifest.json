@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.1.3",
+  "sdkRelease": "2.1.4",
   "projectLicense": "LicenseRef-Proprietary",
   "purpose": "Exact candidate source/assets allowlist. Null is pending generation, never a successful hash. Export refuses null/missing/changed inputs; refresh hashes only for these already enumerated exact paths.",
   "binaryInputs": {
@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "c92795cbc625afe22d21fe64cb8c968275d5cfcb6afa8043d8f9ee6f5f960f2f",
+      "sha256": "71c9e173cf464d1edcbc44032128a8ccd0e80d56b3fa5f6cade3feb56eedb43e",
       "required": true
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "Cargo.lock",
       "target": "Cargo.lock",
-      "sha256": "f8f578d83daf75edaf5f486bcf4e13aec9fd6e4a7459ff044c7f1e74f6489fdf",
+      "sha256": "f877375a907932902412e0285df2fb28e5e768f26e9dce0bc033a20814d4ca0f",
       "required": true
     },
     {
@@ -85,7 +85,7 @@
     {
       "source": "HOST-INTEGRATION.zh-CN.md",
       "target": "HOST-INTEGRATION.zh-CN.md",
-      "sha256": "32b2974d27b901174289e6d5ff06446a408a397b5b4addbc2abd4550c8a251fd",
+      "sha256": "594168c32cfa7351c95ce345d0c905216cc961e5915c175655bcc79d2ca6f290",
       "required": true
     },
     {
@@ -139,13 +139,13 @@
     {
       "source": "crates/reference-host/Cargo.toml",
       "target": "crates/reference-host/Cargo.toml",
-      "sha256": "6f3d5cd59bfcdfc96d6612470573a3158253a78481b5b05b770de831a5e0d712",
+      "sha256": "feab7dbcf7ada0402bc19ca2c609ba4d2a96e20cde1c67dc2544d121f3a9a67d",
       "required": true
     },
     {
       "source": "crates/reference-host/src/before_send.rs",
       "target": "crates/reference-host/src/before_send.rs",
-      "sha256": "592c61162992c351059e69f195873ca993d39f400f60b18053aed85ed98b9b3c",
+      "sha256": "ea902eb1be0ff1c8151ffc5f9905c2bb6823e1d7af34b10cef41a92a833868cd",
       "required": true
     },
     {
@@ -241,7 +241,7 @@
     {
       "source": "crates/reference-host/tests/http_stream.rs",
       "target": "crates/reference-host/tests/http_stream.rs",
-      "sha256": "1319ee66b3ce5e78447677af5a74a4f4e6355b23f310f9ccd3000696ecd7f120",
+      "sha256": "352d443c76776357d07f555d163cfa018c8e094505fd95170dc55f307926ae9c",
       "required": true
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "crates/tools/Cargo.toml",
       "target": "crates/tools/Cargo.toml",
-      "sha256": "68815f1785796801af7ebd90eef1aa1af9afeb197576a707103c0fd6d211b1f6",
+      "sha256": "3a75ec8c69116ecd5c6ed9d9280041608f2089e715bba86326598138524e364e",
       "required": true
     },
     {
@@ -547,7 +547,7 @@
     {
       "source": "examples/authoring-lock.json",
       "target": "examples/authoring-lock.json",
-      "sha256": "707d735f80f69df46f9beca3f780d1bcb57f0c1736e131aaf6d27360892d3049",
+      "sha256": "ea2952fc51a53601300f7e64512de9e0a69c86a0716c3d89f80cedf210d92dba",
       "required": true
     },
     {
@@ -1147,7 +1147,7 @@
     {
       "source": "templates/rust/template-lock.json",
       "target": "templates/rust/template-lock.json",
-      "sha256": "4e1fdeca11b824fdf3c274f30959759a7148efba976d315c0c63ac4f51421dea",
+      "sha256": "a4d8a76b75639ea9259d98b1372bbd5427cc8bcb205331745267a8da4cb85116",
       "required": true
     },
     {
@@ -1189,7 +1189,7 @@
     {
       "source": "templates/template-lock.json",
       "target": "templates/template-lock.json",
-      "sha256": "4e1fdeca11b824fdf3c274f30959759a7148efba976d315c0c63ac4f51421dea",
+      "sha256": "a4d8a76b75639ea9259d98b1372bbd5427cc8bcb205331745267a8da4cb85116",
       "required": true
     },
     {

@@ -441,3 +441,51 @@ async fn before_send_ack_precedes_audio_http_and_rejection_sends_nothing() {
     }
     service.stop().await;
 }
+
+#[tokio::test]
+async fn before_send_redacts_unregistered_query_values_without_changing_request() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let origin = format!("http://{}", listener.local_addr().unwrap());
+    let target = "/video?signature=unregistered%2Bsecret&expires=123&signature=";
+    let server = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut headers = Vec::new();
+        while !headers.ends_with(b"\r\n\r\n") {
+            assert!(headers.len() < 8192);
+            headers.push(socket.read_u8().await.unwrap());
+        }
+        socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n").await.unwrap();
+        String::from_utf8(headers).unwrap()
+    });
+    let (_workspace, http) = broker(&origin);
+    let ready = Arc::new(Notify::new());
+    let allow = Arc::new(Notify::new());
+    let records = Arc::new(Mutex::new(Vec::new()));
+    let sink = Arc::new(AuditGate {
+        ready: ready.clone(),
+        allow: allow.clone(),
+        reject: false,
+        records: records.clone(),
+    });
+    let http = Arc::new(Arc::try_unwrap(http).ok().unwrap().with_before_send(sink, "test/download".into()));
+    let plan = request(&format!("{origin}{target}"), 5000);
+    let job = {
+        let http = http.clone();
+        tokio::spawn(async move { http.execute(&plan, None, &Control::new(None)).await })
+    };
+    timeout(Duration::from_secs(3), ready.notified()).await.unwrap();
+    allow.notify_one();
+    job.await.unwrap().unwrap();
+    let headers = timeout(Duration::from_secs(3), server).await.unwrap().unwrap();
+    assert_eq!(headers.lines().next(), Some(format!("GET {target} HTTP/1.1").as_str()));
+
+    let records = records.lock().unwrap();
+    assert_eq!(records.len(), 1);
+    let audit_url = url::Url::parse(records[0]["url"].as_str().unwrap()).unwrap();
+    assert_eq!(audit_url.path(), "/video");
+    assert_eq!(
+        audit_url.query_pairs().into_owned().collect::<Vec<_>>(),
+        ["signature", "expires", "signature"].map(|key| (key.to_owned(), "[REDACTED]".to_owned()))
+    );
+    assert!(!serde_json::to_string(&http.audit().unwrap()).unwrap().contains("unregistered"));
+}

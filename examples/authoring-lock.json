@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.1.3",
+  "sdkRelease": "2.1.4",
   "status": "MEASURED_ARTIFACTS_RUNTIME_EVIDENCE_SEPARATE",
   "scope": "ACTUAL_EXAMPLE_ARTIFACTS_AND_TASK_LOCAL_MOCK_EVIDENCE",
-  "note": "Current public source hashes. Sync/cloud 1.0.1 default artifacts rebuilt for SDK 2.1.0. Workflow artifact unchanged; its generatedFiles retain historical build input digests. Root Cargo.lock changes only native SDK tool versions; author SDK/registry closure unchanged. Runtime evidence remains separate. 2.1.1 changes host decoding only; author/registry compile closure and example artifact bytes unchanged; shared source inventory refreshed without claiming example rebuild. SDK 2.1.2 refreshes current public source hashes and preserves the original measured example artifact identities. SDK 2.1.3 refreshes current shared source hashes; historical example artifacts and generated inputs are retained.",
+  "note": "Current public source hashes. Sync/cloud 1.0.1 default artifacts rebuilt for SDK 2.1.0. Workflow artifact unchanged; its generatedFiles retain historical build input digests. Root Cargo.lock changes only native SDK tool versions; author SDK/registry closure unchanged. Runtime evidence remains separate. 2.1.1 changes host decoding only; author/registry compile closure and example artifact bytes unchanged; shared source inventory refreshed without claiming example rebuild. SDK 2.1.2 refreshes current public source hashes and preserves the original measured example artifact identities. SDK 2.1.3 refreshes current shared source hashes; historical example artifacts and generated inputs are retained. SDK 2.1.4 refreshes current shared source hashes and retains historical example artifacts.",
   "dependencyPolicy": "Independent author workspaces. Only public ../../sdk/rust path dependency and exact public registry versions; no application/private crate. Generate the author Cargo.lock from the sealed public dependency source before --locked builds.",
   "sharedVideoInputSchemaDigest": "832ea7f6ccf75f5af0d5cdd0b431ab96c6e7c969645deb962a739d372508bf6f",
   "examples": [
@@ -35,7 +35,7 @@
         },
         {
           "path": "Cargo.lock",
-          "sha256": "f8f578d83daf75edaf5f486bcf4e13aec9fd6e4a7459ff044c7f1e74f6489fdf"
+          "sha256": "f877375a907932902412e0285df2fb28e5e768f26e9dce0bc033a20814d4ca0f"
         },
         {
           "path": "sdk/rust/Cargo.toml",
@@ -212,7 +212,7 @@
         },
         {
           "path": "Cargo.lock",
-          "sha256": "f8f578d83daf75edaf5f486bcf4e13aec9fd6e4a7459ff044c7f1e74f6489fdf"
+          "sha256": "f877375a907932902412e0285df2fb28e5e768f26e9dce0bc033a20814d4ca0f"
         },
         {
           "path": "sdk/rust/Cargo.toml",
@@ -385,7 +385,7 @@
         },
         {
           "path": "Cargo.lock",
-          "sha256": "f8f578d83daf75edaf5f486bcf4e13aec9fd6e4a7459ff044c7f1e74f6489fdf"
+          "sha256": "f877375a907932902412e0285df2fb28e5e768f26e9dce0bc033a20814d4ca0f"
         },
         {
           "path": "sdk/rust/Cargo.toml",

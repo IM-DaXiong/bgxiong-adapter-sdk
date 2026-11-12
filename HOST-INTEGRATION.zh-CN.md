@@ -160,3 +160,7 @@ Embedded hosts use `Session::prepare_reviewed_completion` for a candidate, or `a
 开发CLI `check` 的每个capabilities/package_validation调用保留独立guest执行预算5000ms（还受manifest.wallMs和fuel约束）。运行时在冷组件编译后才启动guest执行时钟，宿主不能再用15秒总时限挤占首次编译。CLI显式提供120秒准备allowance、握手/写帧/退出各5秒及5秒清理余量，合成每调用145秒host Control截止时间；准备allowance是截止预算的组成，未声明精确的独立准备阶段计时。超时后的进程回收仍受既有传输限时约束，实际总耗时可能包含截止后的清理，不伪报145秒为含全部回收的硬总时长。两个检查顺序执行，不重试、不联网、不提供凭证。
 
 回执输出预算、每次调用实际总耗时及检查实际总耗时，不把这些总耗时冒充编译/guest各阶段耗时。TIMEOUT和RESOURCE_UNAVAILABLE保留原分类与预算诊断，不能一律报告INVALID_PACKAGE；真正合同/包验证失败仍拒绝。增加准备预算不放宽guest循环、内存、fuel或网络权限。
+
+### 出站审计 URL
+
+SDK 2.1.4 的 before-send 审计保留查询键及其顺序，查询值统一写为 `[REDACTED]`，用户信息和片段会移除。审计地址仅用于诊断。请求和恢复分别使用原始地址与冻结任务身份。

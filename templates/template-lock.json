@@ -96,7 +96,7 @@
       "sources": [
         {
           "path": "Cargo.lock",
-          "sha256": "f8f578d83daf75edaf5f486bcf4e13aec9fd6e4a7459ff044c7f1e74f6489fdf"
+          "sha256": "f877375a907932902412e0285df2fb28e5e768f26e9dce0bc033a20814d4ca0f"
         },
         {
           "path": "sdk/rust/Cargo.toml",

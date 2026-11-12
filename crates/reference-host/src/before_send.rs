@@ -70,17 +70,56 @@ impl<'de> serde::de::Visitor<'de> for Texts<'_> {
 }
 pub(crate) fn redact_url(raw: &str, vault: &CredentialVault) -> String {
     let Ok(mut url) = url::Url::parse(raw) else {
-        return vault.redact(raw);
+        return "[INVALID_URL]".into();
     };
+    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() {
+        return "[INVALID_URL]".into();
+    }
+    url.set_fragment(None);
+    if url.set_password(None).is_err() || url.set_username("").is_err() {
+        return "[INVALID_URL]".into();
+    }
     if url.query().is_some() {
-        let pairs: Vec<_> = url
-            .query_pairs()
-            .map(|(k, v)| (vault.redact(&k), vault.redact(&v)))
-            .collect();
-        url.query_pairs_mut().clear().extend_pairs(pairs);
+        // Provider-issued signatures need not be present in the credential vault.
+        let keys: Vec<_> = url.query_pairs().map(|(key, _)| vault.redact(&key)).collect();
+        url.query_pairs_mut().clear().extend_pairs(keys.iter().map(|key| (key, "[REDACTED]")));
     }
     vault.redact(url.as_str())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn audit_url_removes_userinfo_fragment_and_query_values() {
+        let vault = CredentialVault::new().unwrap();
+        let audit = redact_url(
+            "https://name:password@example.invalid:8443/media%20file?k%2Bey=secret%2Bvalue&k%2Bey=&flag#private",
+            &vault,
+        );
+        let url = url::Url::parse(&audit).unwrap();
+        assert_eq!(url.origin().ascii_serialization(), "https://example.invalid:8443");
+        assert_eq!(url.path(), "/media%20file");
+        assert!(url.username().is_empty());
+        assert!(url.password().is_none());
+        assert!(url.fragment().is_none());
+        assert_eq!(
+            url.query_pairs().into_owned().collect::<Vec<_>>(),
+            ["k+ey", "k+ey", "flag"].map(|key| (key.to_owned(), "[REDACTED]".to_owned()))
+        );
+    }
+
+    #[test]
+    fn audit_url_keeps_plain_urls_and_omits_unparseable_input() {
+        let vault = CredentialVault::new().unwrap();
+        let plain = "https://example.invalid/media";
+        assert_eq!(redact_url(plain, &vault), plain);
+        assert_eq!(redact_url("bad url?secret=raw", &vault), "[INVALID_URL]");
+        assert_eq!(redact_url("data:text/plain,raw", &vault), "[INVALID_URL]");
+    }
+}
+
 pub(crate) fn redact(value: &mut Value, vault: &CredentialVault) {
     match value {
         Value::String(s) => *s = vault.redact(s),
