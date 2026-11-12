@@ -1,5 +1,7 @@
 # 统一开放适配标准与 SDK 开发者预览版
 
+比格熊官网 [www.bgxiong.com](https://www.bgxiong.com)｜微信公众号：天途影像｜[比格熊开发治理 Skill](https://www.bgxiong.com/goods/9p65SRB2Sl)
+
 软件只提供一套平台无关的接入标准。官方 API、自建服务、云端聚合服务、ComfyUI 工作流，都通过同一个适配器接口接入；“官方”只表示包的作者和发布来源，不代表专用执行通道。用户的智能体只凭公开资料制作包，软件导入后发现其能力、显示参数并执行，无须项目方为每个服务修改主程序。
 
 本仓库是这套标准及其 SDK 的公开开发源：[bgxiong-adapter-sdk](https://github.com/IM-DaXiong/bgxiong-adapter-sdk)。说明文档采用 [MIT](LICENSE)；适配器包和主程序仍使用各自许可。
@@ -107,12 +109,8 @@ pwsh -File .\tools\build_sdk.ps1 -Profile debug -OutputDirectory <absolute-new-d
 - 适配器仓：[https://github.com/IM-DaXiong/bgxiong-third-party-adapters](https://github.com/IM-DaXiong/bgxiong-third-party-adapters)
 - 当前包和下载从该仓 [README](https://github.com/IM-DaXiong/bgxiong-third-party-adapters/blob/main/README.md) 进入。仓库里写明已经在应用中实测的，包括 Wan 2.2 S2V，以及 MiniMax H3-Image 的安装、文生图、参考图编辑、自由画布、片段画布和同任务恢复。其余包以该仓 README 和对应验收记录里的范围为准，未写实测的不算已成功出片。
 
-## 联系我们 / Contact
-
-公众号搜索 **天途影像**，可在后台私信联系。
-
-WeChat Official Account: search **天途影像** and message us in the backend.
-
 ## 许可证
 
 本仓库说明文档采用根目录 [LICENSE](LICENSE) 的 MIT 许可。适配器包、主程序和第三方依赖不因此改许可。
+
+比格熊官网 [www.bgxiong.com](https://www.bgxiong.com)｜微信公众号：天途影像｜[比格熊开发治理 Skill](https://www.bgxiong.com/goods/9p65SRB2Sl)
