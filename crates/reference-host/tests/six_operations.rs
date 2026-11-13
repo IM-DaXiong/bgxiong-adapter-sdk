@@ -38,6 +38,11 @@ struct Fixture {
 fn build(directory: &Path, args: &[&str]) {
     let mut command = std::process::Command::new("cargo");
     command.current_dir(directory).args(args);
+    // Guest fixtures have their own temporary workspace; the SDK worker may use
+    // an explicit toolchain-isolated target directory supplied by the test runner.
+    if args.contains(&"wasm32-wasip2") || args.contains(&"generate-lockfile") {
+        command.env_remove("CARGO_TARGET_DIR");
+    }
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -97,6 +102,12 @@ impl Adapter for Guest{fn invoke(request:Invocation,host:&mut dyn Host)->Respons
  let result=match op{
   "capabilities"=>serde_json::from_str(include_str!("capabilities.json")).unwrap(),
   "probe"=>{
+    if p["kind"]=="submission_identity" {
+      json!({"kind":"submission_identity","requestId":p["requestId"],"requestDigest":p["requestDigest"],"expectedRevision":p["expectedRevision"],"status":"ready","submissionScope":{"storeId":"fixture-durable-store","instanceId":"original-instance"}})
+    } else if p["kind"]=="submission_resolution" {
+      http(host,&p["configuration"],"/resolve",json!({"kind":"none"}));
+      json!({"kind":"submission_resolution","requestId":p["requestId"],"requestDigest":p["requestDigest"],"expectedRevision":p["expectedRevision"],"submissionScope":p["submissionScope"],"status":"accepted","accepted":{"kind":"accepted","vendorTaskId":"real-job-one","appliedParams":null,"resumeToken":null,"usage":null}})
+    } else {
     if p["kind"]=="package_validation"{
       let denied:Result<Value,_>=host::call(host,"host-http.execute",&json!({"plan":{"method":"GET","url":"http://127.0.0.1/forbidden","headers":[],"generatedHeaders":[],"body":{"kind":"none"},"sink":{"kind":"buffer","maxBytes":64},"timeoutMs":100},"credential":null}));assert!(denied.is_err());
       json!({"packageValid":true,"connection":"not_checked","authentication":"not_checked","resources":"not_checked","issues":[]})
@@ -111,11 +122,12 @@ impl Adapter for Guest{fn invoke(request:Invocation,host:&mut dyn Host)->Respons
       let config=&p["configuration"];let opened:Value=host::call(host,"host-http-stream.open",&json!({"plan":{"method":"GET","url":format!("{}/stream",config["endpointBaseUrl"].as_str().unwrap()),"headers":[],"generatedHeaders":[{"kind":"bearer","name":"Authorization","targetField":"Authorization"}],"body":{"kind":"none"},"sink":{"kind":"buffer","maxBytes":4096},"timeoutMs":5000},"credential":config["credentialRef"]})).unwrap();
       let mut bytes=Vec::new();loop{let part:Value=host::call(host,"host-http-stream.read",&json!({"streamId":opened["streamId"],"maxBytes":1024})).unwrap();bytes.extend(serde_json::from_value::<Vec<u8>>(part["bytes"].clone()).unwrap());if part["eof"]==true{break;}}
       let _:()=host::call(host,"host-http-stream.close",&json!({"streamId":opened["streamId"]})).unwrap();assert_eq!(serde_json::from_slice::<Value>(&bytes).unwrap()["ok"],true);
-      json!({"packageValid":true,"connection":"ready","authentication":"ready","resources":"ready","issues":[]})}
+      json!({"packageValid":true,"connection":"ready","authentication":"ready","resources":"ready","issues":[]})}}
   },
   "upload"=>{let stat:Value=host::call(host,"host-media.info",&json!({"handle":p["media"]["handle"]})).unwrap();assert_eq!(stat["fileName"],p["media"]["fileName"]);let bytes:Vec<u8>=host::call(host,"host-media.read",&json!({"handle":p["media"]["handle"],"offset":"0","maxBytes":8})).unwrap();assert!(!bytes.is_empty());http(host,&p["configuration"],"/upload",json!({"kind":"media","handle":p["media"]["handle"]}));json!({"mediaId":p["media"]["id"],"uploadRef":"uploaded-source"})},
   "submit"=>{
    let remote=http(host,&p["configuration"],"/submit",json!({"kind":"bytes","bytes":p.to_string().into_bytes()}));
+   if p["input"]["prompt"]=="lose-response" {panic!("simulated guest crash after real remote acceptance");}
    let checkpoint:Value=host::call(host,"host-checkpoint.read",&json!({"requestId":i["requestId"]})).unwrap();
    if p["operationId"]=="local.six/async"{
      let result=json!({"kind":"accepted","vendorTaskId":remote["job"],"appliedParams":null,"resumeToken":null,"usage":null});
@@ -151,7 +163,8 @@ fn config(workspace: DevelopmentWorkspace, origin: &str, fixture: &Fixture) -> R
     ReferenceConfig {
         workspace,
         sdk_root: fixture.sdk.clone(),
-        worker: fixture.sdk.join("target/debug").join(format!("bgx-adapter-v2-worker{}", std::env::consts::EXE_SUFFIX)),
+        worker: std::env::var_os("CARGO_TARGET_DIR").map(PathBuf::from).unwrap_or_else(||fixture.sdk.join("target"))
+            .join("debug").join(format!("bgx-adapter-v2-worker{}", std::env::consts::EXE_SUFFIX)),
         transport: Options {
             handshake_timeout: Duration::from_secs(5),
             write_timeout: Duration::from_secs(5),
@@ -185,6 +198,7 @@ fn fixture_trust() -> TrustContext {
     let mut trust = TrustContext::default();
     trust.supported_features.insert("stream-events-v1".into());
     trust.supported_features.insert("operation-preflight-v1".into());
+    trust.supported_features.insert("submission-resolution-v1".into());
     trust
 }
 
@@ -238,6 +252,58 @@ async fn operation_preflight_runs_through_worker_without_network_or_media_side_e
     assert_eq!(data(&result.response)["status"], "ready");
     assert_eq!(*calls.lock().unwrap(), before);
     host.wait_idle().await.unwrap();
+    server.abort();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_submit() {
+    let f = fixture();
+    let resolution_package = tempfile::tempdir().unwrap();
+    let artifact = fs::read(f.package_a.path().join("adapter.wasm")).unwrap();
+    fs::write(resolution_package.path().join("adapter.wasm"), &artifact).unwrap();
+    let mut manifest: Value = serde_json::from_slice(&fs::read(f.package_a.path().join("manifest.json")).unwrap()).unwrap();
+    manifest["requiredFeatures"].as_array_mut().unwrap().push(json!("submission-resolution-v1"));
+    let bytes = serde_json::to_vec(&manifest).unwrap();
+    fs::write(resolution_package.path().join("manifest.json"), &bytes).unwrap();
+    fs::write(resolution_package.path().join("manifest.sha256"), format!("{} adapter.wasm\n{} manifest.json\n",hash_bytes(&artifact),hash_bytes(&bytes))).unwrap();
+    let (origin, calls, server) = server().await;
+    let directory = tempfile::tempdir().unwrap();
+    let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
+    let host = make_host(workspace.clone(), &origin, resolution_package.path());
+    host.invoke(invocation("capabilities", "resolution-caps", json!({}), "generic"), None, None, control(), None).await.unwrap();
+    let reference = host.catalog().unwrap().into_iter().find(|v| v.reference.operation_id == "local.six/async").unwrap().reference;
+    let mut input = submit(&reference, &origin);
+    input["input"]["prompt"] = json!("lose-response");
+    // Two cold worker compilations (identity + submit) share this one deadline.
+    let failure = host.invoke(invocation("submit", "lost-original", input, "video"), Some(reference.clone()), None,
+        Control::new(Some(Instant::now()+Duration::from_secs(90))), None).await;
+    assert!(failure.as_ref().map_or(true, |receipt|serde_json::to_value(&receipt.response).unwrap().get("error").is_some()));
+    if let Err(error) = &failure { eprintln!("lost reply error: {error:?}"); }
+    if calls.lock().unwrap().get("/submit").is_none() {
+        for entry in fs::read_dir(workspace.root().join("traces")).unwrap() {
+            eprintln!("dispatch trace {}", fs::read_to_string(entry.unwrap().path()).unwrap());
+        }
+    }
+    assert_eq!(calls.lock().unwrap().get("/submit"), Some(&1), "The fixture must actually accept the original POST before testing recovery");
+    host.wait_idle().await.unwrap();
+    drop(host);
+    let store = CheckpointStore::open(&workspace, SnapshotPolicy::new(vec![KEY.as_bytes().to_vec().into()]).unwrap()).unwrap();
+    let checkpoint = store.read("lost-original", "lost-original").unwrap().unwrap();
+    assert_eq!(checkpoint["state"], "acceptance_unknown");
+    assert_eq!(checkpoint["submissionScope"]["storeId"], "fixture-durable-store");
+    drop(store);
+    let resumed = make_host(workspace.clone(), &origin, resolution_package.path());
+    let request = json!({"schemaVersion":2,"kind":"submission_resolution","requestId":"lost-original",
+        "requestDigest":checkpoint["requestDigest"],"expectedRevision":checkpoint["revision"],"package":checkpoint["package"],
+        "bindingId":checkpoint["bindingId"],"configuration":{"endpointBaseUrl":origin,"credentialRef":"stable-credential"},
+        "submissionScope":checkpoint["submissionScope"]});
+    let resolved = resumed.invoke(invocation("probe", "resolve-original", request, "video"), None, Some("lost-original".into()), control(), None).await.unwrap();
+    assert_eq!(data(&resolved.response)["status"], "accepted");
+    let queried = resumed.invoke(invocation("query", "query-resolved", task(&reference, &origin), "video"), None, Some("lost-original".into()), control(), None).await.unwrap();
+    assert_eq!(data(&queried.response)["status"], "succeeded");
+    assert_eq!(calls.lock().unwrap().get("/submit"), Some(&1));
+    assert_eq!(calls.lock().unwrap().get("/resolve"), Some(&1));
+    resumed.wait_idle().await.unwrap();
     server.abort();
 }
 #[derive(Default)]

@@ -24,6 +24,7 @@ NAMES = {
     "host-ports": "HostPortCallV2", "checkpoint": "CheckpointV2",
     "resolution": "ResolutionEvidenceV1",
     "submission-rejection": "SubmissionRejectionV1",
+    "submission-resolution": "SubmissionResolutionV1",
     "profile": "ProfileV2", "policy": "SchemaPolicyV2",
     "host-channel-v1": "HostChannelV1",
     "synthesize.input": "SpeechInputV1", "synthesize.output": "SpeechOutputV1",
@@ -391,7 +392,14 @@ def main():
     registry = json.loads((ROOT / "protocol/vendor-adapter-protocol.json").read_text(encoding="utf-8"))
     for entry in registry["standardProfiles"]:
         for key in ["inputSchema", "outputSchema", "resumeSchema"]:
-            assert entry[key] == refs[entry[key]["id"]], "frozen speech schema digest drift; revise the version before changing published bytes"
+            reference = refs.get(entry[key]["id"])
+            if reference is None:
+                # Other standard profiles keep their own fixture owner. Verify
+                # published bytes without inserting them into the speech-v1 fixture.
+                relative = entry[key]["id"].removeprefix(BASE)
+                source = (ROOT / relative).read_bytes()
+                reference = {"id":json.loads(source)["$id"],"digest":hashlib.sha256(source).hexdigest()}
+            assert entry[key] == reference, "frozen speech schema digest drift; revise the version before changing published bytes"
     fixture["schemas"] = resources
     def encoded(value):
         return json.dumps(value, ensure_ascii=False, indent=2) + "\n"

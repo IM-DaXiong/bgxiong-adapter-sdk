@@ -64,6 +64,9 @@
         },
         {
           "$ref": "https://bgxiong.local/vendor-adapter/v2/operation-preflight.schema.json#/$defs/request"
+        },
+        {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/request"
         }
       ]
     },
@@ -133,6 +136,9 @@
         },
         {
           "$ref": "https://bgxiong.local/vendor-adapter/v2/operation-preflight.schema.json#/$defs/result"
+        },
+        {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/result"
         }
       ]
     },

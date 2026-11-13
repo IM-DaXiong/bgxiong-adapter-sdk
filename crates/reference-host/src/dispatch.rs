@@ -377,6 +377,24 @@ impl ReferenceHost {
         let result=async{
             let inner=self.inner.clone();let selected=reference.clone();let request=invocation.clone();let scope_copy=scope.clone();let c=control.clone();
             let prepared=blocking(move||inner.prepare(&request,selected.as_ref(),checkpoint_request.as_deref(),&scope_copy,&c)).await?;
+            if i["operation"] == "submit"
+                && self.inner.package.verified().enabled_features().contains(bgx_adapter_v2_validator::submission_resolution::FEATURE)
+                && prepared.context.as_ref().is_some_and(|context| context.operation()["execution"]["mode"] == "asynchronous") {
+                let session = prepared.session.as_ref().unwrap();
+                let request = lock(session)?.submission_probe_request("submission_identity")?;
+                let mut identity_invocation = i.clone();
+                identity_invocation["operation"] = json!("probe");
+                identity_invocation["requestId"] = json!(format!("submission-identity-{}", hash_bytes(scope.request_id.as_bytes())));
+                identity_invocation["payloadJson"] = json!(request.to_string());
+                let receipt = Box::pin(self.invoke_observed(
+                    serde_json::from_value(identity_invocation).map_err(|_|fail("INVALID_INPUT","Invalid identity invocation"))?,
+                    None, Some(scope.request_id.clone()), control.child(), None, None,
+                )).await?;
+                let response = encode(&receipt.response);
+                let data: Value = serde_json::from_str(response["dataJson"].as_str().ok_or_else(|| fail("RESOURCE_UNAVAILABLE", "Submission identity probe failed before submit"))?)
+                    .map_err(|_|fail("INVALID_INPUT","Submission identity response is invalid"))?;
+                lock(session)?.bind_submission_scope(&mut *lock(&self.inner.checkpoints)?, &request, &data)?;
+            }
             let enabled=!(i["operation"]=="capabilities"||(i["operation"]=="probe"&&serde_json::from_str::<Value>(i["payloadJson"].as_str().unwrap()).map_err(|_|fail("INVALID_INPUT","Invalid probe payload"))?["kind"].as_str().is_some_and(|kind| matches!(kind, "package_validation" | "operation_preflight"))));
             let network=NetworkPolicy::new(self.inner.package.verified(),scope.clone(),self.inner.config.network.clone(),enabled).map_err(native)?;
             let mut vault=CredentialVault::new().map_err(native)?;
@@ -433,8 +451,8 @@ impl ReferenceHost {
             };
             let (worker,consumer)=tokio::join!(worker,consumer);
             let (worker_pid,response,events)=worker?;consumer?;
-            let inner=self.inner.clone();let final_response=response.clone();let invoke=invocation.clone();let root=prepared.root_id.clone();let ctx=prepared.context.clone();let session=prepared.session.clone();let scope_copy=scope.clone();
-            let cancellation=match blocking(move||inner.finish(&invoke,&final_response,reference.as_ref(),root.as_deref(),ctx.as_deref(),session.as_ref(),&scope_copy)).await {
+            let inner=self.inner.clone();let final_response=response.clone();let invoke=invocation.clone();let root=prepared.root_id.clone();let ctx=prepared.context.clone();let session=prepared.session.clone();let scope_copy=scope.clone();let finish_control=control.clone();
+            let cancellation=match blocking(move||inner.finish(&invoke,&final_response,reference.as_ref(),root.as_deref(),ctx.as_deref(),session.as_ref(),&scope_copy,&finish_control)).await {
                 Ok(value)=>value,
                 Err(error)=>{
                     trace.emit(json!({"stage":"receipt_validation","requestId":scope.request_id,"code":error.code}),self.inner.snapshot.clone()).await?;
@@ -466,10 +484,10 @@ impl Inner {
         check_control(control)?;
         let i = encode(invocation);
         let op = i["operation"].as_str().unwrap();
-        if root_id.is_some() && !matches!(op, "query" | "cancel") {
+        if root_id.is_some() && !matches!(op, "query" | "cancel" | "probe") {
             return Err(fail(
                 "INVALID_INPUT",
-                "Only query/cancel may select an existing checkpoint",
+                "Only query/cancel and submission probes may select an existing checkpoint",
             ));
         }
         if reference.is_some() && matches!(op, "query" | "cancel") {
@@ -517,6 +535,17 @@ impl Inner {
                 }
             }
             "probe" => {
+                if bgx_adapter_v2_validator::submission_resolution::is_kind(&payload) {
+                    let root = root_id.ok_or_else(|| fail("INVALID_INPUT", "Submission probe requires its original checkpoint"))?;
+                    let session = Session::recover(&*lock(&self.checkpoints)?, root, self.package.verified(), &self.binding, &self.config.configuration_ref)?;
+                    if payload != session.submission_probe_request(payload["kind"].as_str().unwrap())? {
+                        return Err(fail("CHECKPOINT_CONFLICT", "Submission probe differs from original request, revision or scope"));
+                    }
+                    prepared.root_id = Some(root.into());
+                    prepared.session = Some(Arc::new(Mutex::new(session)));
+                    return Ok(prepared);
+                }
+                if root_id.is_some() { return Err(fail("INVALID_INPUT", "This probe cannot access a task checkpoint")); }
                 if payload["kind"] == "operation_preflight" {
                     let selected = reference.ok_or_else(|| fail("INVALID_INPUT", "Operation preflight requires an explicit capability reference"))?;
                     bgx_adapter_v2_validator::operation_preflight::validate_request(
@@ -713,6 +742,7 @@ impl Inner {
         context: Option<&ValidatedOperationInput>,
         session: Option<&Arc<Mutex<Session>>>,
         scope: &LeaseScope,
+        control: &Control,
     ) -> Result<Option<CancellationReceipt>> {
         validate_response(invocation, response, context).map_err(cv)?;
         let r = encode(response);
@@ -746,6 +776,14 @@ impl Inner {
                 let payload: Value = serde_json::from_str(i["payloadJson"].as_str().unwrap())
                     .map_err(|_| fail("INVALID_INPUT", "Invalid probe payload"))?;
                 if payload["kind"] == "operation_preflight" { return Ok(None); }
+                if bgx_adapter_v2_validator::submission_resolution::is_kind(&payload) {
+                    if payload["kind"] == "submission_resolution" {
+                        lock(session.ok_or_else(||fail("INVALID_INPUT","Resolution session missing"))?)?.apply_submission_resolution(
+                            &mut *lock(&self.checkpoints)?, &payload, &data, &mut *lock(&self.media)?, scope, control,
+                        )?;
+                    }
+                    return Ok(None);
+                }
                 if let Some(reference) = reference {
                     lock(&self.catalog)?
                         .set_readiness(reference, data)

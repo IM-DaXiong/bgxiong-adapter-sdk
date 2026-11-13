@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.1.5",
+  "sdkRelease": "2.2.0",
   "projectLicense": "LicenseRef-Proprietary",
   "purpose": "Exact candidate source/assets allowlist. Null is pending generation, never a successful hash. Export refuses null/missing/changed inputs; refresh hashes only for these already enumerated exact paths.",
   "binaryInputs": {
@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "c3c207fd947bffdf5621f071f3bb6e242f77051b0c3197d2df4d5e28ec8c5873",
+      "sha256": "3535ced17cebe84034f34aba0d16693452a5b8fdbedbda01ae53e74d4df44b3b",
       "required": true
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "Cargo.lock",
       "target": "Cargo.lock",
-      "sha256": "a6fa95be0d935948403e6a368163eab1a3f7a4c39fe5c3e24cad566840f5b188",
+      "sha256": "9a89bfe37111d38cb3b23dc13869d96d441af3ccb9f7d87ec0934b5e41fe7923",
       "required": true
     },
     {
@@ -85,7 +85,7 @@
     {
       "source": "HOST-INTEGRATION.zh-CN.md",
       "target": "HOST-INTEGRATION.zh-CN.md",
-      "sha256": "d06931d6da952d79b95c060a20c1f71d0a5764c97023f32938557e3184c76839",
+      "sha256": "9036d96956b7dfbad6e5364b9052dee2e2a7bf700a471d0ea8c2b66c83e9ef9d",
       "required": true
     },
     {
@@ -139,7 +139,7 @@
     {
       "source": "crates/reference-host/Cargo.toml",
       "target": "crates/reference-host/Cargo.toml",
-      "sha256": "025b5cb3b7a6dd3f8d89c8546263d02a5d67e5fce072c56ce72a951838674451",
+      "sha256": "9b4f9518557240375fd8aaa6916c31d863f7200536cb023e804715589c6f955f",
       "required": true
     },
     {
@@ -175,7 +175,7 @@
     {
       "source": "crates/reference-host/src/dispatch.rs",
       "target": "crates/reference-host/src/dispatch.rs",
-      "sha256": "d7fba55864c3ea6d28eb8d5ab56a3360d9bba9730d68294076236693328b3370",
+      "sha256": "08cf46ab3a0cfffbe8a50acbe0d6338f43e541551df2e7daf790cb0787d8c83d",
       "required": true
     },
     {
@@ -223,7 +223,7 @@
     {
       "source": "crates/reference-host/src/session.rs",
       "target": "crates/reference-host/src/session.rs",
-      "sha256": "1c76b86e3f51ba0a2218b3eda7c9a1653039f7c1228174adff8bd1bdcb26a03c",
+      "sha256": "b85e7e39aa6c93f35267cde8771a6dded5fcad85c94995fe7aeeb30253d27374",
       "required": true
     },
     {
@@ -265,13 +265,13 @@
     {
       "source": "crates/reference-host/tests/recovery.rs",
       "target": "crates/reference-host/tests/recovery.rs",
-      "sha256": "d4a91cb1a21796c37536e145177a7a4c300fa710e4dc21c3d8bf771711ce25e0",
+      "sha256": "229e92dda1fdebdd770ababd5ca50c2185bd74545749675ced28879ea2647a65",
       "required": true
     },
     {
       "source": "crates/reference-host/tests/six_operations.rs",
       "target": "crates/reference-host/tests/six_operations.rs",
-      "sha256": "52b21c2ba54def764bf8443f47034e0a205b003b243ade6cd5f5ec87bbf21179",
+      "sha256": "93477417fa98badeb48a590e9fb8875c090919b21c5d8903f1e635d67594f3d9",
       "required": true
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "crates/tools/Cargo.toml",
       "target": "crates/tools/Cargo.toml",
-      "sha256": "22891dc5ab91fe79a3e0ba5e84f7545222caaaa13ef3939def58388e9ee267d0",
+      "sha256": "c9815cff8dbef15fc617b1dc4eedab62c69dc8e339141d830b6abf997b2d1f2b",
       "required": true
     },
     {
@@ -343,7 +343,7 @@
     {
       "source": "crates/tools/src/main.rs",
       "target": "crates/tools/src/main.rs",
-      "sha256": "a2b851d1b86fc627a7d0cb804b885aed532c94a5259e2bd480fbd50f88fa3473",
+      "sha256": "359bd7b8c8049d7eabb98e3678d6bc19c6f01fa907ccc574d8271f9aeb98cfc0",
       "required": true
     },
     {
@@ -355,7 +355,7 @@
     {
       "source": "crates/tools/src/run.rs",
       "target": "crates/tools/src/run.rs",
-      "sha256": "ffd9a0e4ff00c2381ef07d8fbf7babf30daa8221e1f4da05eeb8f0426d20d193",
+      "sha256": "cc1f8cfeb93a0f0add79e43e478043f7b4c83737f9ef1cbaf0e7646afeb8663c",
       "required": true
     },
     {
@@ -397,7 +397,7 @@
     {
       "source": "crates/tools/tests/run.rs",
       "target": "crates/tools/tests/run.rs",
-      "sha256": "bfbbcbdfe4e4977f3f218da9034a663399ea13e0d2aae7a0875bcd03b12f9b09",
+      "sha256": "4193671d28e28f226548517be6084a3bf6a928a549156c9903e7277469ac79e9",
       "required": true
     },
     {
@@ -409,7 +409,7 @@
     {
       "source": "crates/transport/src/client.rs",
       "target": "crates/transport/src/client.rs",
-      "sha256": "51f334f79a52b4ca0252eb7a3fb929699f0cb48af82e7f68df76dba04bce80df",
+      "sha256": "6bed1db3c134edbd38640c0fd902412bff3e37af8739d9e711bc677dbe3ba10d",
       "required": true
     },
     {
@@ -481,7 +481,7 @@
     {
       "source": "crates/validator/src/lib.rs",
       "target": "crates/validator/src/lib.rs",
-      "sha256": "efc979ff46085ed5a0221fd4812c24ad43ee67e785d27bb5b6cc3edeab6652c8",
+      "sha256": "1676eb4994574fcdf8e2ac1fbbcaf06d4e735c324a6e450454813a5c9b1148c1",
       "required": true
     },
     {
@@ -499,13 +499,13 @@
     {
       "source": "crates/validator/src/result.rs",
       "target": "crates/validator/src/result.rs",
-      "sha256": "717b1f3da0cf4e0dcb6999d7b9e2df9c461e3cd759f32d00b82e320db1cccc29",
+      "sha256": "4b667b9a23a886d33b98404f2e45b80a5789e2396fa7e1805af4322b31a4d211",
       "required": true
     },
     {
       "source": "crates/validator/src/schema_registry.rs",
       "target": "crates/validator/src/schema_registry.rs",
-      "sha256": "0e8948c036360a7483c174adb02c388b1e3f2d9a513d60ecd0d728f34ca57d04",
+      "sha256": "a02d9ba7eb14c3a0168c68c4886c6e5998f71d82205e0ccf339be11706f34291",
       "required": true
     },
     {
@@ -889,7 +889,7 @@
     {
       "source": "protocol/host-feature-catalog.json",
       "target": "protocol/host-feature-catalog.json",
-      "sha256": "2f01a61fb137dd59a3f41f021673142efb60beb81f9dde177e4ed242884f6446",
+      "sha256": "d2e6fc0ab1a5c7b182b8051aae8faf29d5f31d1a5970c3c92c9513760c89d50b",
       "required": true
     },
     {
@@ -931,13 +931,13 @@
     {
       "source": "schemas/checkpoint.schema.json",
       "target": "schemas/checkpoint.schema.json",
-      "sha256": "ffb3c537a2e3294b7939ece0e3172e701b3d2fe938914d9e9e6f9e46d2f73a59",
+      "sha256": "aa924adc2d3a800ecd8b20141e809e3bf10860ee48016add1e14e997ff1f79b5",
       "required": true
     },
     {
       "source": "schemas/control-operations.schema.json",
       "target": "schemas/control-operations.schema.json",
-      "sha256": "308c3a1437a0586ad5498c0b5c394ab78abe99e75ca1263a1cd470438e0d623a",
+      "sha256": "471a2bf28c9c3a9b281f294247cc317a25a549b66a84a7be333e8ebbb7ec2070",
       "required": true
     },
     {
@@ -1039,7 +1039,7 @@
     {
       "source": "sdk/rust/src/generated.rs",
       "target": "sdk/rust/src/generated.rs",
-      "sha256": "fc0f25e689d269ac0569ab977057b6bd40603939100a60595d590054796aa325",
+      "sha256": "418a9ec2dc844592ece5ac26684440668a1236f27787701706da295781052c95",
       "required": true
     },
     {
@@ -1087,7 +1087,7 @@
     {
       "source": "sdk/typescript/src/generated.ts",
       "target": "sdk/typescript/src/generated.ts",
-      "sha256": "9974275ea16797a65a473133e0c2c8852cc278de8d9ffcd002de19640ef9e217",
+      "sha256": "7ccda2c26b459d7cfdf507ca7db6017175ba1a84676b08d2b671c1913aae79f2",
       "required": true
     },
     {
@@ -1147,7 +1147,7 @@
     {
       "source": "templates/rust/template-lock.json",
       "target": "templates/rust/template-lock.json",
-      "sha256": "a4d8a76b75639ea9259d98b1372bbd5427cc8bcb205331745267a8da4cb85116",
+      "sha256": "1335c1d639a6ba6b9a23bc93d440b43c43c4a74c14a74ebee765c70f86b2c3a8",
       "required": true
     },
     {
@@ -1159,7 +1159,7 @@
     {
       "source": "templates/rust/vendor-sdk/sdk/rust/src/generated.rs",
       "target": "templates/rust/vendor-sdk/sdk/rust/src/generated.rs",
-      "sha256": "fc0f25e689d269ac0569ab977057b6bd40603939100a60595d590054796aa325",
+      "sha256": "418a9ec2dc844592ece5ac26684440668a1236f27787701706da295781052c95",
       "required": true
     },
     {
@@ -1189,7 +1189,7 @@
     {
       "source": "templates/template-lock.json",
       "target": "templates/template-lock.json",
-      "sha256": "a4d8a76b75639ea9259d98b1372bbd5427cc8bcb205331745267a8da4cb85116",
+      "sha256": "1335c1d639a6ba6b9a23bc93d440b43c43c4a74c14a74ebee765c70f86b2c3a8",
       "required": true
     },
     {
@@ -1327,7 +1327,7 @@
     {
       "source": "tools/generate_contracts.py",
       "target": "tools/generate_contracts.py",
-      "sha256": "3dd844f1cad305ee4f7d7bc6ef14f62fe75ffe9a79ff85e35e6146a1bab9fbfc",
+      "sha256": "84d5b6bf44c423dea0e356e3566064e3f6ba46eebeba03391b005655dffff972",
       "required": true
     },
     {
@@ -1640,6 +1640,36 @@
       "source": "profiles/speech-analysis-v1/resume.schema.json",
       "target": "profiles/speech-analysis-v1/resume.schema.json",
       "sha256": "f921c5cc7d877dd004f220fea6304d260c908ce45a2898e53bbd95b38a98e327",
+      "required": true
+    },
+    {
+      "source": "SUBMISSION-RESOLUTION.zh-CN.md",
+      "target": "SUBMISSION-RESOLUTION.zh-CN.md",
+      "sha256": "45a21dab111ddfa2a2f192fbdc27cd4e268b32b581fb875702682f3d4f25d6c2",
+      "required": true
+    },
+    {
+      "source": "schemas/submission-resolution.schema.json",
+      "target": "schemas/submission-resolution.schema.json",
+      "sha256": "8addc8d373c34885d726fe3131c050b978bab38857ade21d02f0b29d5271df85",
+      "required": true
+    },
+    {
+      "source": "crates/reference-host/src/submission_resolution.rs",
+      "target": "crates/reference-host/src/submission_resolution.rs",
+      "sha256": "147f709daffb9157bc448c097caa34e6e4b45d631878a2ae38613a8710e33f32",
+      "required": true
+    },
+    {
+      "source": "crates/validator/src/submission_resolution.rs",
+      "target": "crates/validator/src/submission_resolution.rs",
+      "sha256": "9f8f3fa946c72f7bdad38edd281be61d34346abbe9d761eeaa144ca01a504b14",
+      "required": true
+    },
+    {
+      "source": "crates/tools/src/session_inspect.rs",
+      "target": "crates/tools/src/session_inspect.rs",
+      "sha256": "90a9ad290a1a0c6eef23035116bc8973ed28cde2c9734702c15ceb28a8e120a4",
       "required": true
     }
   ]

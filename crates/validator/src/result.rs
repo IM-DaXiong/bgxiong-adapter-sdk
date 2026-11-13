@@ -343,6 +343,12 @@ pub fn validate_response(
         if request["kind"] == "operation_preflight" {
             return crate::operation_preflight::validate_result(&request, &data);
         }
+        if crate::submission_resolution::is_kind(&request) {
+            return crate::submission_resolution::validate_result(&request, &data);
+        }
+        if crate::submission_resolution::is_kind(&data) {
+            return Err(ContractError::new("INVALID_INPUT", "/kind", "Unrequested submission resolution"));
+        }
         if data["kind"] == "operation_preflight" {
             return Err(ContractError::new("INVALID_INPUT", "/kind", "legacy probe cannot return operation preflight"));
         }

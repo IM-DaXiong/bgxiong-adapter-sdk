@@ -38,6 +38,11 @@
       "id": "video-speech-v1",
       "requiredImports": [],
       "semantics": "Portrait and driving audio to a new video preserving the selected driving audio; separate from TTS and reference audio"
+    },
+    {
+      "id": "submission-resolution-v1",
+      "requiredImports": [],
+      "semantics": "Before submit freeze durable service scope; reconcile the original request with CAS, accepted query reference or atomic late-submit-fencing tombstone; never resubmit unknown work"
     }
   ],
   "baseImports": [

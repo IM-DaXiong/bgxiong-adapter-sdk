@@ -13,6 +13,7 @@ pub mod image_projection;
 pub mod media_target_selection;
 pub mod video_target_keyframes;
 pub mod operation_preflight;
+pub mod submission_resolution;
 pub mod video_speech;
 
 pub use context::{ContractError, ValidatedOperationInput};

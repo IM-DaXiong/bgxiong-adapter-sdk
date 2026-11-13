@@ -140,6 +140,9 @@ fn package(version: &str) -> VerifiedPackage {
 }
 fn package_with_rejection(version: &str, rejection: bool) -> VerifiedPackage {
     let features = if rejection { vec!["submission-rejection-v1"] } else { vec![] };
+    package_with_features(version, features)
+}
+fn package_with_features(version: &str, features: Vec<&str>) -> VerifiedPackage {
     let manifest = json!({"schemaVersion":2,"pluginId":"local.recovery","displayName":"Recovery tests","version":version,"protocolRange":{"min":2,"max":2},"requiredFeatures":features,"optionalFeatures":[],"language":"rust","entry":"adapter.wasm","artifactSha256":hash_bytes(b"test"),"publisherId":null,"publisherKeyId":null,"requestedCapabilities":{"endpointPolicy":["staticHosts"],"networkHosts":[],"allowPrivateNetwork":false,"auth":["none"],"mediaSlots":["image"],"stateBytes":0,"embeddedHeaders":[]},"limits":{"memoryBytes":33554432,"fuel":1000,"wallMs":100,"outputBytes":1048576}});
     let bytes = serde_json::to_vec(&manifest).unwrap();
     let hashes = BTreeMap::from([
@@ -203,6 +206,69 @@ fn request(c: &CapabilityContractV2, media: Value, config: Value) -> OperationSu
 }
 fn accepted(cursor: u64) -> OperationResultV2 {
     serde_json::from_value(json!({"kind":"accepted","vendorTaskId":"real-task-731","appliedParams":null,"resumeToken":{"cursor":cursor},"usage":null})).unwrap()
+}
+
+#[test]
+fn online_resolution_restores_only_the_original_durable_scope_and_exact_cas() {
+    for outcome in ["accepted", "rejected", "unknown"] {
+        let directory = tempfile::tempdir().unwrap();
+        let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
+        let mut store = CheckpointStore::open(&workspace, policy()).unwrap();
+        let mut media = broker(&workspace);
+        let package = package_with_features("1.0.0", vec!["submission-resolution-v1"]);
+        let binding = binding(&package);
+        let owner = scope(&package, "original");
+        let c = contract();
+        let input = request(&c, json!([]), binding.configuration().clone());
+        let ctx = validate_input(&c, &input).unwrap();
+        let mut session = Session::prepare(&mut store, &package, &binding, &owner, &ctx,
+            &media.validation_context(&owner), &media, "configuration-one").unwrap();
+        assert!(session.begin_submit(&mut store).is_err());
+        let identity = session.submission_probe_request("submission_identity").unwrap();
+        let domain = json!({"storeId":"durable-store-A","instanceId":"original-process"});
+        let ready = json!({"kind":"submission_identity","requestId":"original","requestDigest":identity["requestDigest"],
+            "expectedRevision":identity["expectedRevision"],"status":"ready","submissionScope":domain});
+        session.bind_submission_scope(&mut store, &identity, &ready).unwrap();
+        assert!(session.bind_submission_scope(&mut store, &identity, &ready).is_err());
+        session.begin_submit(&mut store).unwrap();
+        drop(session);
+        let mut recovered = Session::recover(&store, "original", &package, &binding, "configuration-one").unwrap();
+        let mut racing = Session::recover(&store, "original", &package, &binding, "configuration-one").unwrap();
+        let request = recovered.submission_probe_request("submission_resolution").unwrap();
+        let mut receipt = json!({"kind":"submission_resolution","requestId":"original","requestDigest":request["requestDigest"],
+            "expectedRevision":request["expectedRevision"],"submissionScope":domain,"status":outcome});
+        match outcome {
+            "accepted" => receipt["accepted"] = serde_json::to_value(accepted(1)).unwrap(),
+            "rejected" => receipt["rejection"] = json!({"tombstoneId":"atomic-fence-1","fencesLateSubmit":true}),
+            _ => receipt["reason"] = json!("remote response unavailable"),
+        }
+        let control = Control::new(None);
+        let query_scope = scope(&package, "fresh-query");
+        for field in ["requestDigest", "expectedRevision"] {
+            let mut bad = receipt.clone(); bad[field] = json!("wrong");
+            assert!(recovered.apply_submission_resolution(&mut store, &request, &bad, &mut media, &query_scope, &control).is_err());
+        }
+        let mut wrong_store = receipt.clone(); wrong_store["submissionScope"]["storeId"] = json!("new-empty-store");
+        assert!(recovered.apply_submission_resolution(&mut store, &request, &wrong_store, &mut media, &query_scope, &control).is_err());
+        if outcome == "accepted" {
+            let mut bad_token = receipt.clone(); bad_token["accepted"]["resumeToken"] = json!({"cursor":0});
+            assert!(recovered.apply_submission_resolution(&mut store, &request, &bad_token, &mut media, &query_scope, &control).is_err());
+        }
+        if outcome == "rejected" {
+            let mut missing_fence = receipt.clone(); missing_fence["rejection"]["fencesLateSubmit"] = json!(false);
+            assert!(recovered.apply_submission_resolution(&mut store, &request, &missing_fence, &mut media, &query_scope, &control).is_err());
+        }
+        recovered.apply_submission_resolution(&mut store, &request, &receipt, &mut media, &query_scope, &control).unwrap();
+        assert_eq!(recovered.checkpoint()["state"], if outcome == "unknown" {"acceptance_unknown"} else {outcome});
+        assert!(recovered.begin_submit(&mut store).is_err());
+        if outcome != "unknown" {
+            assert_eq!(racing.apply_submission_resolution(&mut store, &request, &receipt, &mut media, &query_scope, &control).unwrap_err().code, "CHECKPOINT_CONFLICT");
+        }
+        if outcome == "accepted" {
+            let query = recovered.query_context(&mut media, &query_scope, &control).unwrap();
+            assert_eq!(serde_json::to_value(query.input).unwrap()["vendorTaskId"], "real-task-731");
+        }
+    }
 }
 fn queried(status: &str, cursor: u64) -> OperationResultV2 {
     serde_json::from_value(json!({"status":status,"outputs":[],"data":if status=="succeeded" {json!({"description":"Done"})} else {Value::Null},"usage":null,"progress":null,"terminalFailure":null,"resumeToken":{"cursor":cursor}})).unwrap()

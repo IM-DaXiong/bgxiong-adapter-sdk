@@ -175,10 +175,11 @@ impl Arguments {
                 return Err(argument(flag, "Required explicit run option is missing"));
             }
         }
-        if matches!(parsed.operation.as_str(), "query" | "cancel") != parsed.root.is_some() {
+        if (matches!(parsed.operation.as_str(), "query" | "cancel") && parsed.root.is_none())
+            || (parsed.root.is_some() && !matches!(parsed.operation.as_str(), "query" | "cancel" | "probe")) {
             return Err(argument(
                 "--request-id",
-                "Only query and cancel require the original checkpoint request identifier",
+                "Query/cancel require the original checkpoint; a submission probe may select it explicitly",
             ));
         }
         if parsed.create && parsed.root.is_some() {

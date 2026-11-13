@@ -19,6 +19,8 @@ use bgx_adapter_v2_validator::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+#[path = "submission_resolution.rs"]
+mod submission_resolution;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -270,6 +272,14 @@ impl Session {
                 "ACCEPTANCE_UNKNOWN",
                 "Submission cannot be repeated from this checkpoint",
             ));
+        }
+        let asynchronous = self.frozen.contract.operations.iter().any(|operation| {
+            let operation = value(operation);
+            operation["id"] == self.checkpoint["operationId"] && operation["execution"]["mode"] == "asynchronous"
+        });
+        if asynchronous && self.features.contains(bgx_adapter_v2_validator::submission_resolution::FEATURE)
+            && self.checkpoint.get("submissionScope").is_none() {
+            return Err(fail("ACCEPTANCE_UNKNOWN", "Durable submission scope must be frozen before submit"));
         }
         let mut next = self.next()?;
         next["state"] = json!("acceptance_unknown");

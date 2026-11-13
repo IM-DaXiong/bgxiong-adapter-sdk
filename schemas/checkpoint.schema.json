@@ -155,6 +155,9 @@
           "type": "null"
         }
       ]
+    },
+    "submissionScope": {
+      "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/scope"
     }
   },
   "required": [

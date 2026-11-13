@@ -7,6 +7,7 @@ mod package;
 mod run;
 mod retained;
 mod resolution;
+mod session_inspect;
 mod transcript;
 mod workspace;
 use bgx_adapter_v2_validator::package::{PublisherTrust, TrustContext};
@@ -49,7 +50,7 @@ fn usage(message: impl Into<String>) -> Error {
         )
     }
 }
-const HELP:&str="SDK v2 development CLI; does not install adapters into the application.\nprepare-resolution --input ABS (offline reviewed evidence; host commits exact checkpoint/task CAS)\nretained info | inspect | export (read-only confirmed media; see RETAINED-MEDIA.zh-CN.md)\ninit --sdk ABS --dir NEW_ABS [--template speech]\nbuild --sdk ABS --project ABS [--offline]\ncheck --sdk ABS --worker ABS --project ABS [trust flags]\npack --sdk ABS --project ABS --out NEW_ABS [trust flags] [--signing-key ABS (--unencrypted-key | --password-file ABS)]\nTrust flags: --publisher-id ID --key-id ID --plugin-prefix PREFIX --public-key ABS\ncaps|probe|upload|submit|query|cancel --sdk ABS --worker ABS --package ABS --workspace ABS --config ABS --input ABS --output ABS [--create-workspace] [--request-id ORIGINAL] [--host-checkpoints] [--host-channel-v1]\n--host-channel-v1: await a channel_accept for before-send, then persist and acknowledge each outbound request before HTTP. media-stream is not implemented in S0.\n--host-checkpoints: checkpoint rows are served by the embedding host over stdio JSON lines ({hostCheckpoint:{op:get|insert|swap,...}}); the last stdout line stays the Response.\nRuntime input/output: public Invocation/Response JSON. Output must be in workspace/receipts.\nrecord (six-operation flags) --transcript NEW_ABS --seed U64 --now-unix-ms U64\nreplay --sdk ABS --worker ABS --package ABS --workspace ABS --config ABS --transcript ABS --output ABS\nconform (replay paths, replacing --transcript) --manifest ABS --evidence-root ABS\nReplay is offline, executes the original guest, and is labelled MOCK. Case command/status evidence declarations remain distinguished from actual execution.\nExit codes: 0 success, 1 failure, 2 argument error.";
+const HELP:&str="SDK v2 development CLI; does not install adapters into the application.\nprepare-resolution --input ABS (offline reviewed evidence; host commits exact checkpoint/task CAS)\nworkspace-create --workspace NEW_ABS (initialize a new SDK session before submit)\nsession-inspect --workspace ABS --request-id ORIGINAL (read-only SDK checkpoint projection)\nretained info | inspect | export (read-only confirmed media; see RETAINED-MEDIA.zh-CN.md)\ninit --sdk ABS --dir NEW_ABS [--template speech]\nbuild --sdk ABS --project ABS [--offline]\ncheck --sdk ABS --worker ABS --project ABS [trust flags]\npack --sdk ABS --project ABS --out NEW_ABS [trust flags] [--signing-key ABS (--unencrypted-key | --password-file ABS)]\nTrust flags: --publisher-id ID --key-id ID --plugin-prefix PREFIX --public-key ABS\ncaps|probe|upload|submit|query|cancel --sdk ABS --worker ABS --package ABS --workspace ABS --config ABS --input ABS --output ABS [--create-workspace] [--request-id ORIGINAL] [--host-checkpoints] [--host-channel-v1]\n--host-channel-v1: await a channel_accept for before-send, then persist and acknowledge each outbound request before HTTP. media-stream is not implemented in S0.\n--host-checkpoints: checkpoint rows are served by the embedding host over stdio JSON lines ({hostCheckpoint:{op:get|insert|swap,...}}); the last stdout line stays the Response.\nRuntime input/output: public Invocation/Response JSON. Output must be in workspace/receipts.\nrecord (six-operation flags) --transcript NEW_ABS --seed U64 --now-unix-ms U64\nreplay --sdk ABS --worker ABS --package ABS --workspace ABS --config ABS --transcript ABS --output ABS\nconform (replay paths, replacing --transcript) --manifest ABS --evidence-root ABS\nReplay is offline, executes the original guest, and is labelled MOCK. Case command/status evidence declarations remain distinguished from actual execution.\nExit codes: 0 success, 1 failure, 2 argument error.";
 struct Args {
     values: BTreeMap<String, String>,
     flags: BTreeSet<String>,
@@ -524,6 +525,12 @@ async fn execute(args: &[String]) -> Result<Value> {
     }
     if command == "prepare-resolution" {
         return resolution::execute(&args[1..]);
+    }
+    if command == "workspace-create" {
+        return session_inspect::create(&args[1..]);
+    }
+    if command == "session-inspect" {
+        return session_inspect::execute(&args[1..]);
     }
     if command == "record" {
         return record_command(args).await;

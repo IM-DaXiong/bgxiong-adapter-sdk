@@ -166,3 +166,6 @@ Embedded hosts use `Session::prepare_reviewed_completion` for a candidate, or `a
 SDK 2.1.4 的 before-send 审计保留查询键及其顺序，查询值统一写为 `[REDACTED]`，用户信息和片段会移除。审计地址仅用于诊断。请求和恢复分别使用原始地址与冻结任务身份。
 
 从 2.1.5 起，小型 bytes JSON 正文里的独立 HTTP(S) URL 值也按同一规则投影到 `body` 和 `text`，原始请求字节和其他普通文本继续按原合同处理。临时授权链接在本次调用内获得并使用，冻结请求、checkpoint、回执仅保存安全的任务或媒体身份。原片可使用媒体租约，含临时地址的提交 JSON 使用内存正文。显式开发录制会捕获原始端口交换，录制使用合成数据。
+# SDK 2.2.0：未知受理在线核验
+
+新增可声明 `submission-resolution-v1`，沿原六操作中的 probe、原 Session 和 checkpoint CAS 找回未知受理任务；异步 submit 前冻结持久服务域，未确认不得重发。普通语音工作区可通过只读 `session-inspect` 获取公开检查点投影。完整合同及取消边界见 [SUBMISSION-RESOLUTION.zh-CN.md](SUBMISSION-RESOLUTION.zh-CN.md)。

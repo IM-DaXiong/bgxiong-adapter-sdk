@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json",
+  "$defs": {
+    "scope": {
+      "type": "object",
+      "properties": {
+        "storeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instanceId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "storeId",
+        "instanceId"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 2
+            },
+            "kind": {
+              "const": "submission_identity"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            },
+            "package": {
+              "type": "object",
+              "properties": {
+                "pluginId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "digest": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "pluginId",
+                "version",
+                "digest"
+              ],
+              "additionalProperties": false
+            },
+            "bindingId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "configuration": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "kind",
+            "requestId",
+            "requestDigest",
+            "expectedRevision",
+            "package",
+            "bindingId",
+            "configuration"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 2
+            },
+            "kind": {
+              "const": "submission_resolution"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            },
+            "package": {
+              "type": "object",
+              "properties": {
+                "pluginId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "digest": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "pluginId",
+                "version",
+                "digest"
+              ],
+              "additionalProperties": false
+            },
+            "bindingId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "configuration": {
+              "type": "object"
+            },
+            "submissionScope": {
+              "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/scope"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "kind",
+            "requestId",
+            "requestDigest",
+            "expectedRevision",
+            "package",
+            "bindingId",
+            "configuration",
+            "submissionScope"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "submission_identity"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            },
+            "submissionScope": {
+              "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/scope"
+            },
+            "status": {
+              "const": "ready"
+            }
+          },
+          "required": [
+            "kind",
+            "requestId",
+            "requestDigest",
+            "expectedRevision",
+            "submissionScope",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "submission_resolution"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            },
+            "submissionScope": {
+              "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/scope"
+            },
+            "status": {
+              "const": "accepted"
+            },
+            "accepted": {
+              "$ref": "https://bgxiong.local/vendor-adapter/v2/result.schema.json"
+            }
+          },
+          "required": [
+            "kind",
+            "requestId",
+            "requestDigest",
+            "expectedRevision",
+            "submissionScope",
+            "status",
+            "accepted"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "submission_resolution"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            },
+            "submissionScope": {
+              "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/scope"
+            },
+            "status": {
+              "const": "rejected"
+            },
+            "rejection": {
+              "type": "object",
+              "properties": {
+                "tombstoneId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fencesLateSubmit": {
+                  "const": true
+                }
+              },
+              "required": [
+                "tombstoneId",
+                "fencesLateSubmit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "requestId",
+            "requestDigest",
+            "expectedRevision",
+            "submissionScope",
+            "status",
+            "rejection"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "submission_resolution"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requestDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            },
+            "submissionScope": {
+              "$ref": "https://bgxiong.local/vendor-adapter/v2/submission-resolution.schema.json#/$defs/scope"
+            },
+            "status": {
+              "const": "unknown"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind",
+            "requestId",
+            "requestDigest",
+            "expectedRevision",
+            "submissionScope",
+            "status",
+            "reason"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

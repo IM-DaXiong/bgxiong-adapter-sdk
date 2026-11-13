@@ -42,6 +42,11 @@ impl Control {
     pub fn cancel(&self) {
         self.cancel.cancel();
     }
+    /// Nested probes inherit cancellation/deadline, but their cleanup cannot
+    /// cancel the owning submission after a successful preflight.
+    pub fn child(&self) -> Self {
+        Self { cancel: self.cancel.child_token(), deadline: self.deadline }
+    }
     pub fn is_cancelled(&self) -> bool {
         self.cancel.is_cancelled()
     }

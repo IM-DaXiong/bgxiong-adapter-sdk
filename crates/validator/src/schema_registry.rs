@@ -37,6 +37,7 @@ pub(crate) fn public_documents() -> Vec<Value> {
         "checkpoint",
         "resolution",
         "submission-rejection",
+        "submission-resolution",
         "profile",
         "policy",
         "host-channel-v1"

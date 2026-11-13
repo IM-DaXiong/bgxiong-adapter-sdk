@@ -1,4 +1,28 @@
 //! The CLI is exercised as separate OS processes against an actual WASM guest.
+
+#[test]
+fn initialized_empty_session_is_distinct_from_a_lost_original_store() {
+    let root = tempfile::tempdir().unwrap();
+    let workspace = root.path().join("session");
+    let cli = env!("CARGO_BIN_EXE_bgx-adapter-v2");
+    let created = command(cli).arg("workspace-create").arg("--workspace").arg(&workspace).output().unwrap();
+    assert!(created.status.success(), "{}", String::from_utf8_lossy(&created.stderr));
+    let database = workspace.join("checkpoint-fixtures.sqlite");
+    let original = fs::read(&database).unwrap();
+    let inspect = || command(cli).arg("session-inspect").arg("--workspace").arg(&workspace)
+        .arg("--request-id").arg("not-submitted").output().unwrap();
+    let empty = inspect();
+    assert!(empty.status.success());
+    let value: Value = serde_json::from_slice(&empty.stdout).unwrap();
+    assert_eq!(value["requestId"], "not-submitted");
+    assert!(value["checkpoint"].is_null());
+    assert_eq!(fs::read(&database).unwrap(), original);
+    assert!(!command(cli).arg("workspace-create").arg("--workspace").arg(&workspace).output().unwrap().status.success());
+    fs::remove_file(&database).unwrap();
+    let missing = inspect();
+    assert!(!missing.status.success());
+    assert!(!database.exists(), "Read-only inspection must not recreate a lost store");
+}
 use bgx_adapter_v2_reference_host::{
     checkpoint::{CheckpointStore, SnapshotPolicy},
     media::DevelopmentWorkspace,
