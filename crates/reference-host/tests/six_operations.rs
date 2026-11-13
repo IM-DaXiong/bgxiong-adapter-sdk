@@ -262,6 +262,19 @@ async fn operation_preflight_runs_through_worker_without_network_or_media_side_e
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_submit() {
+    #[derive(Default)]
+    struct ContractAudit(Mutex<Vec<Value>>);
+    impl bgx_adapter_v2_reference_host::before_send::BeforeSendSink for ContractAudit {
+        fn persist<'a>(&'a self, record: &'a Value) -> bgx_adapter_v2_reference_host::before_send::PersistFuture<'a> {
+            Box::pin(async move {
+                bgx_adapter_v2_validator::SchemaRegistry::validate_public("host-channel-v1", record)
+                    .map_err(|_|serde_json::from_value(json!({"code":"INVALID_INPUT","message":"Audit schema rejected before-send record"})).unwrap())?;
+                self.0.lock().unwrap().push(record.clone());
+                Ok(())
+            })
+        }
+    }
+    let audit = Arc::new(ContractAudit::default());
     let f = fixture();
     let resolution_package = tempfile::tempdir().unwrap();
     let artifact = fs::read(f.package_a.path().join("adapter.wasm")).unwrap();
@@ -279,7 +292,7 @@ async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_su
         let mut config = config(workspace, logical, f);
         config.credentials.clear();
         if let Some(physical) = physical { config.network.origins.push(physical.into()); }
-        ReferenceHost::new(config, package, binding).unwrap()
+        ReferenceHost::new(config, package, binding).unwrap().with_before_send(audit.clone())
     };
     let directory = tempfile::tempdir().unwrap();
     let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
@@ -356,6 +369,10 @@ async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_su
     assert_eq!(resumed_calls.lock().unwrap().get("/query"), Some(&1));
     assert_eq!(resumed_calls.lock().unwrap().get("/submit"), None);
     assert_eq!(frozen_bytes(), frozen_before);
+    let records = audit.0.lock().unwrap();
+    assert_eq!(records.len(), 3, "one original submit, resolution and query, each persisted before actual HTTP");
+    assert!(records.iter().all(|r| r["url"].as_str().unwrap().starts_with(&origin)));
+    drop(records);
     resumed.wait_idle().await.unwrap();
     second_server.abort();
 }

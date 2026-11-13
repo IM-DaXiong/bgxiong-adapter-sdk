@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.2.1",
+  "sdkRelease": "2.2.2",
   "projectLicense": "LicenseRef-Proprietary",
   "purpose": "Exact candidate source/assets allowlist. Null is pending generation, never a successful hash. Export refuses null/missing/changed inputs; refresh hashes only for these already enumerated exact paths.",
   "binaryInputs": {
@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "d4f65e54d551e35c82ee780131b40683abea3dbaa096bce5bdfe311bfcd0722f",
+      "sha256": "14a84aa4904b60a3a8fcffcca91bd3ec33306f48e30c63afcfee2d14b6caff03",
       "required": true
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "Cargo.lock",
       "target": "Cargo.lock",
-      "sha256": "74307cc8271fac161d67a4610fbf8d470b4e4fb20cb278cf40d44bdbe4b4576d",
+      "sha256": "b2da83a2e09cc31ec118f30c03db5d6de25c0b09ec6cb0569d419cf49bdd7c45",
       "required": true
     },
     {
@@ -85,7 +85,7 @@
     {
       "source": "HOST-INTEGRATION.zh-CN.md",
       "target": "HOST-INTEGRATION.zh-CN.md",
-      "sha256": "fab51cf0877c0af33e16fa7a90c112525eb9cbdd0633da3c59af8f29484e8f06",
+      "sha256": "ab2cb91e8dddb139af3f8409d33572f943ff51d54656a272a848d924cd1e627f",
       "required": true
     },
     {
@@ -139,7 +139,7 @@
     {
       "source": "crates/reference-host/Cargo.toml",
       "target": "crates/reference-host/Cargo.toml",
-      "sha256": "4da61a9680482ab8d6b2f739df241b865752f0cd58796c55abb21a5fcc471f69",
+      "sha256": "ebf300e16a86afa656c837f3207cb3ee73916055d81b75abcb553974b610dc12",
       "required": true
     },
     {
@@ -187,7 +187,7 @@
     {
       "source": "crates/reference-host/src/http.rs",
       "target": "crates/reference-host/src/http.rs",
-      "sha256": "7860b315896dc07008b6d205189c8addd6486379bec7604c71342d7c5f3867fc",
+      "sha256": "44986454e6a2e2c59c5caf8ea66cd3486a7e8f723f4fb62d5b1f6e1dcb38380e",
       "required": true
     },
     {
@@ -271,7 +271,7 @@
     {
       "source": "crates/reference-host/tests/six_operations.rs",
       "target": "crates/reference-host/tests/six_operations.rs",
-      "sha256": "bd75767a506cd4f668affc2ca38acb6dd2ba364bc4d639e94edab1a2583a1e78",
+      "sha256": "2906945aaaf67434e1f354f62a8ecdd06cb51be884389da3c10f8f743ba6afb2",
       "required": true
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "crates/tools/Cargo.toml",
       "target": "crates/tools/Cargo.toml",
-      "sha256": "841f20fb1778ac4f15770b66d3286193b59552da010f7e3f6019e1d0b247f87f",
+      "sha256": "45de27a9222a7d0bb2cb9793f41ffbb941bbbad9579b0e3f9189d98c9c65b9f0",
       "required": true
     },
     {

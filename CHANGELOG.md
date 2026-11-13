@@ -1,5 +1,10 @@
 # 变更记录
 
+## 2.2.2 冷恢复审计通道修正 — 2026-11-14
+
+- 保持既有闭合 before-send 公共 schema，路由审计保留在正式 dispatch trace 与 HTTP audit；不向旧通道添加未登记字段。
+- 同一真实 worker 冷恢复用例加入与 CLI 相同的严格审计 schema sink，覆盖实际发送之前的保存边界。2.2.1 原发布保留，不覆盖其字节。
+
 ## 2.2.1 受控本地传输冷恢复 — 2026-11-13
 
 - 显式宿主 `managedRecoveryRoute` 为原持久任务授权短期 loopback 路由，仅恢复 query/cancel/submission_resolution；原配置、摘要、scope 和 CAS 保持冻结。

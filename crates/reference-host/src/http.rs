@@ -371,7 +371,6 @@ impl HttpBroker {
                             "exchangeId":uuid::Uuid::new_v4().to_string(),"requestId":self.media.scope.request_id,
                             "callIndex":index,"operationId":operation_id,"method":plan["method"],
                             "url":crate::before_send::redact_url(raw, &vault),"body":audit_body.value,"text":audit_body.text});
-                        if let Some(route) = &self.managed_recovery_route { record["managedRecoveryRoute"] = route.audit(); }
                         crate::before_send::redact(&mut record, &vault);
                         record
                     };

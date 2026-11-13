@@ -169,7 +169,7 @@ SDK 2.1.4 的 before-send 审计保留查询键及其顺序，查询值统一写
 # SDK 2.2.0：未知受理在线核验
 
 新增可声明 `submission-resolution-v1`，沿原六操作中的 probe、原 Session 和 checkpoint CAS 找回未知受理任务；异步 submit 前冻结持久服务域，未确认不得重发。普通语音工作区可通过只读 `session-inspect` 获取公开检查点投影。完整合同及取消边界见 [SUBMISSION-RESOLUTION.zh-CN.md](SUBMISSION-RESOLUTION.zh-CN.md)。
-# 受控本地服务冷恢复路由（SDK 2.2.1）
+# 受控本地服务冷恢复路由（SDK 2.2.2；修正2.2.1的CLI审计边界）
 
 原任务的 package、binding、configuration、configurationDigest、requestDigest、submissionScope 和冻结输入仍须完全匹配。进程重启造成的本地地址变化不能通过修改这些字段处理。嵌入宿主可为一次恢复调用签发独立 `ManagedRecoveryRoute`，使用 `ReferenceHost::with_managed_recovery_route`；CLI host 配置对应可选字段 `managedRecoveryRoute`（不是 guest 入参）。
 
@@ -177,6 +177,6 @@ SDK 2.1.4 的 before-send 审计保留查询键及其顺序，查询值统一写
 
 宿主必须沿其受管实例 owner 验证当前进程、实际实例身份及独占资源，不能从用户路径或服务名猜测拥有权。租约不能由 guest 提交。SDK 再核原会话全部身份、scope、revision 和操作：只允许 accepted 的 query/cancel，或 acceptance_unknown 的 submission_resolution probe；包必须已声明 submission-resolution-v1。capabilities 只做离线目录读取，不消费租约。submit/upload/其它 probe 一律拒绝，prepared、丢失 scope 或改包也拒绝。
 
-两个 origin 必须是带明确非默认端口的规范 HTTP 数字 loopback（不接受 localhost、userinfo、额外路径/query/fragment），同一次 network grant 必须显式授权两端。HTTP owner 仅替换 origin，保留方法、path、query、body 和结果媒体回收；不自动重定向或重试。租约最多五分钟，发送前复核过期；禁止 credential、generatedHeaders，明文请求头仅允许 Content-Type、Accept、Range。原服务的实例/域校验不能关闭。当前物理实例身份及逻辑/物理 origin 写入原调度审计和 before-send 记录。
+两个 origin 必须是带明确非默认端口的规范 HTTP 数字 loopback（不接受 localhost、userinfo、额外路径/query/fragment），同一次 network grant 必须显式授权两端。HTTP owner 仅替换 origin，保留方法、path、query、body 和结果媒体回收；不自动重定向或重试。租约最多五分钟，发送前复核过期；禁止 credential、generatedHeaders，明文请求头仅允许 Content-Type、Accept、Range。原服务的实例/域校验不能关闭。当前物理实例身份及逻辑/物理 origin 写入原 dispatch trace 和 HTTP audit；before-send 保持原闭合 schema，不追加路由字段。
 
 `submissionScope` 是原持久服务域，不是端口别名。适配包须继续对返回的 store/domain、原 job、摘要和结果核验；新存储、404、连接失败、超时都不证明未受理。负面解析仍要求原域原子墓碑阻止晚到提交。宿主传入新实例租约不修改历史配置、恢复令牌、结果或远端费用事实。
