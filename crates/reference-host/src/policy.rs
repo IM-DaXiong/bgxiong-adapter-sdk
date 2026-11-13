@@ -290,6 +290,8 @@ pub struct HttpAudit {
     pub port: u16,
     pub status: Option<u16>,
     pub outcome: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub managed_recovery_route: Option<Value>,
 }
 impl HttpAudit {
     pub fn new(method: &str, url: &Url) -> Self {
@@ -300,6 +302,7 @@ impl HttpAudit {
             port: url.port_or_known_default().unwrap_or(0),
             status: None,
             outcome: "started".into(),
+            managed_recovery_route: None,
         }
     }
 }

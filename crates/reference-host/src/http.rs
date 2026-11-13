@@ -137,6 +137,7 @@ pub struct HttpBroker {
     audit: Mutex<VecDeque<HttpAudit>>,
     before_send: Option<(Arc<dyn crate::before_send::BeforeSendSink>, String)>,
     call_index: AtomicU64,
+    managed_recovery_route: Option<crate::managed_route::ManagedRecoveryRoute>,
 }
 impl HttpBroker {
     pub fn new(
@@ -159,10 +160,15 @@ impl HttpBroker {
             audit: Mutex::new(VecDeque::new()),
             before_send: None,
             call_index: AtomicU64::new(0),
+            managed_recovery_route: None,
         })
     }
     pub fn with_before_send(mut self, sink: Arc<dyn crate::before_send::BeforeSendSink>, operation_id: String) -> Self {
         self.before_send = Some((sink, operation_id));
+        self
+    }
+    pub(crate) fn with_managed_recovery_route(mut self, route: crate::managed_route::ManagedRecoveryRoute) -> Self {
+        self.managed_recovery_route = Some(route);
         self
     }
     pub fn audit(&self) -> Result<Vec<HttpAudit>> {
@@ -247,9 +253,14 @@ impl HttpBroker {
         let method = plan["method"].as_str().unwrap();
         let parsed = crate::policy::parse_url(raw)?;
         let mut audit = HttpAudit::new(method, &parsed);
+        let routed = self.managed_recovery_route.as_ref().map(|r| r.destination(&plan, credential)).transpose()?;
+        audit.managed_recovery_route = self.managed_recovery_route.as_ref().map(|r| r.audit());
         let result = self
             .guarded(&control, async {
-                let destination = self.policy.resolve(self.policy.scope(), raw).await?;
+                let original = self.policy.resolve(self.policy.scope(), raw).await?;
+                let destination = if let Some(routed) = &routed {
+                    self.policy.resolve(self.policy.scope(), routed).await?
+                } else { original };
                 let headers = self
                     .credentials
                     .lock()
@@ -360,6 +371,7 @@ impl HttpBroker {
                             "exchangeId":uuid::Uuid::new_v4().to_string(),"requestId":self.media.scope.request_id,
                             "callIndex":index,"operationId":operation_id,"method":plan["method"],
                             "url":crate::before_send::redact_url(raw, &vault),"body":audit_body.value,"text":audit_body.text});
+                        if let Some(route) = &self.managed_recovery_route { record["managedRecoveryRoute"] = route.audit(); }
                         crate::before_send::redact(&mut record, &vault);
                         record
                     };
@@ -367,6 +379,7 @@ impl HttpBroker {
                     sink.persist(&record).await?;
                     self.policy.check(self.policy.scope())?;
                 }
+                if let Some(route) = &self.managed_recovery_route { route.check_live()?; }
                 request.send().await.map_err(|_| {
                     error(
                         "RESOURCE_UNAVAILABLE",

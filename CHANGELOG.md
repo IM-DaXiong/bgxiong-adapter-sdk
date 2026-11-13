@@ -1,5 +1,10 @@
 # 变更记录
 
+## 2.2.1 受控本地传输冷恢复 — 2026-11-13
+
+- 显式宿主 `managedRecoveryRoute` 为原持久任务授权短期 loopback 路由，仅恢复 query/cancel/submission_resolution；原配置、摘要、scope 和 CAS 保持冻结。
+- HTTP owner 同时验证两端网络授权，等价保留路径/查询/正文，拒绝提交重放、凭证、过期及跨域租约，并记录原/新路由审计。六操作、guest 协议及 WIT 不变。
+
 ## 2.2.0 未知受理在线核验 — 2026-11-13
 
 - 新增可声明 `submission-resolution-v1`：提交前冻结持久服务域，原请求通过 probe 核验后 CAS 接回 query，原子 tombstone 才能证明未受理；不自动重发。

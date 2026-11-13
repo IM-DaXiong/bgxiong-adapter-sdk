@@ -85,6 +85,11 @@ use bgx_adapter_v2_sdk::{*,host,guest};use serde_json::{json,Value};
 struct Guest;
 fn call<T:serde_json::value::Index>(_:T){} // replaced below; no private host API
 fn http(host:&mut dyn Host,config:&Value,path:&str,body:Value)->Value{
+ if config["credentialRef"]=="none" {
+  let plan=json!({"method":"POST","url":format!("{}{}",config["endpointBaseUrl"].as_str().unwrap(),path),"headers":[],"generatedHeaders":[],"body":body,"sink":{"kind":"buffer","maxBytes":4096},"timeoutMs":5000});
+  let response:Value=host::call(host,"host-http.execute",&json!({"plan":plan,"credential":null})).unwrap();
+  assert_eq!(response["status"],200);let bytes:Vec<u8>=serde_json::from_value(response["payload"]["bytes"].clone()).unwrap();return serde_json::from_slice(&bytes).unwrap()
+ }
  let modes:Vec<String>=host::call(host,"host-credential.capabilities",&json!({"handle":config["credentialRef"]})).unwrap();assert!(modes.iter().any(|m|m=="bearer"));
  let signature:String=host::call(host,"host-credential.sign",&json!({"handle":config["credentialRef"],"specJson":json!({"version":1,"kind":"hmac-sha256","message":"public test message","encoding":"hex"}).to_string()})).unwrap();assert_eq!(signature.len(),64);
  let plan=json!({"method":"POST","url":format!("{}{}",config["endpointBaseUrl"].as_str().unwrap(),path),"headers":[],"generatedHeaders":[{"kind":"bearer","name":"Authorization","targetField":"Authorization"}],"body":body,"sink":{"kind":"buffer","maxBytes":4096},"timeoutMs":5000});
@@ -266,14 +271,24 @@ async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_su
     let bytes = serde_json::to_vec(&manifest).unwrap();
     fs::write(resolution_package.path().join("manifest.json"), &bytes).unwrap();
     fs::write(resolution_package.path().join("manifest.sha256"), format!("{} adapter.wasm\n{} manifest.json\n",hash_bytes(&artifact),hash_bytes(&bytes))).unwrap();
-    let (origin, calls, server) = server().await;
+    let (origin, calls, server) = server_with_auth(false).await;
+    let make_local = |workspace: DevelopmentWorkspace, logical: &str, physical: Option<&str>| {
+        let package = LoadedPackage::load(resolution_package.path(), &fixture_trust()).unwrap();
+        let binding = Binding::new("binding".into(), package.verified(), 1,
+            json!({"endpointBaseUrl":logical,"credentialRef":"none"})).unwrap();
+        let mut config = config(workspace, logical, f);
+        config.credentials.clear();
+        if let Some(physical) = physical { config.network.origins.push(physical.into()); }
+        ReferenceHost::new(config, package, binding).unwrap()
+    };
     let directory = tempfile::tempdir().unwrap();
     let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
-    let host = make_host(workspace.clone(), &origin, resolution_package.path());
+    let host = make_local(workspace.clone(), &origin, None);
     host.invoke(invocation("capabilities", "resolution-caps", json!({}), "generic"), None, None, control(), None).await.unwrap();
     let reference = host.catalog().unwrap().into_iter().find(|v| v.reference.operation_id == "local.six/async").unwrap().reference;
     let mut input = submit(&reference, &origin);
     input["input"]["prompt"] = json!("lose-response");
+    input["configuration"]["credentialRef"] = json!("none");
     // Two cold worker compilations (identity + submit) share this one deadline.
     let failure = host.invoke(invocation("submit", "lost-original", input, "video"), Some(reference.clone()), None,
         Control::new(Some(Instant::now()+Duration::from_secs(90))), None).await;
@@ -291,20 +306,58 @@ async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_su
     let checkpoint = store.read("lost-original", "lost-original").unwrap().unwrap();
     assert_eq!(checkpoint["state"], "acceptance_unknown");
     assert_eq!(checkpoint["submissionScope"]["storeId"], "fixture-durable-store");
+    let frozen_bytes = || -> Vec<u8> {
+        rusqlite::Connection::open_with_flags(workspace.root().join("checkpoint-fixtures.sqlite"), rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap()
+            .query_row("SELECT frozen FROM checkpoint_fixture WHERE request_id='lost-original'", [], |r| r.get(0)).unwrap()
+    };
+    let frozen_before = frozen_bytes();
     drop(store);
-    let resumed = make_host(workspace.clone(), &origin, resolution_package.path());
+    server.abort();
+    server.await.unwrap_err();
+    let (physical, resumed_calls, second_server) = server_with_auth(false).await;
+    assert_ne!(origin, physical);
+    let route = |checkpoint: &Value| serde_json::from_value::<bgx_adapter_v2_reference_host::managed_route::ManagedRecoveryRoute>(json!({
+        "schemaVersion":1,"package":checkpoint["package"],"bindingId":checkpoint["bindingId"],
+        "requestId":checkpoint["requestId"],"requestDigest":checkpoint["requestDigest"],"expectedRevision":checkpoint["revision"],
+        "submissionScope":checkpoint["submissionScope"],"logicalOrigin":origin,"physicalOrigin":physical,
+        "configurationOriginPointer":"/endpointBaseUrl",
+        "physicalInstanceId":"restarted-owned-process","expiresAtUnixMs":
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64+120_000})).unwrap();
+    let resumed = make_local(workspace.clone(), &origin, Some(&physical)).with_managed_recovery_route(route(&checkpoint));
     let request = json!({"schemaVersion":2,"kind":"submission_resolution","requestId":"lost-original",
         "requestDigest":checkpoint["requestDigest"],"expectedRevision":checkpoint["revision"],"package":checkpoint["package"],
-        "bindingId":checkpoint["bindingId"],"configuration":{"endpointBaseUrl":origin,"credentialRef":"stable-credential"},
+        "bindingId":checkpoint["bindingId"],"configuration":{"endpointBaseUrl":origin,"credentialRef":"none"},
         "submissionScope":checkpoint["submissionScope"]});
+    let mut wrong_store = route(&checkpoint);
+    wrong_store.submission_scope["storeId"] = json!("replacement-store");
+    let rejected = make_local(workspace.clone(), &origin, Some(&physical)).with_managed_recovery_route(wrong_store);
+    assert!(rejected.invoke(invocation("probe", "reject-replacement-store", request.clone(), "video"), None,
+        Some("lost-original".into()), control(), None).await.is_err());
+    rejected.wait_idle().await.unwrap();
+    assert!(resumed_calls.lock().unwrap().is_empty());
+    assert!(resumed.invoke(invocation("submit", "forbidden-new-submit", submit(&reference,&origin), "video"),
+        Some(reference.clone()), None, control(), None).await.is_err());
+    assert!(resumed_calls.lock().unwrap().is_empty());
     let resolved = resumed.invoke(invocation("probe", "resolve-original", request, "video"), None, Some("lost-original".into()), control(), None).await.unwrap();
     assert_eq!(data(&resolved.response)["status"], "accepted");
-    let queried = resumed.invoke(invocation("query", "query-resolved", task(&reference, &origin), "video"), None, Some("lost-original".into()), control(), None).await.unwrap();
+    resumed.wait_idle().await.unwrap();
+    let store = CheckpointStore::open(&workspace, SnapshotPolicy::new(vec![]).unwrap()).unwrap();
+    let accepted = store.read("lost-original", "lost-original").unwrap().unwrap();
+    assert_eq!(accepted["configurationDigest"], checkpoint["configurationDigest"]);
+    assert_eq!(accepted["requestDigest"], checkpoint["requestDigest"]);
+    assert_eq!(accepted["submissionScope"], checkpoint["submissionScope"]);
+    drop(store);
+    let resumed = make_local(workspace.clone(), &origin, Some(&physical)).with_managed_recovery_route(route(&accepted));
+    let mut task_request = task(&reference, &origin); task_request["configuration"]["credentialRef"] = json!("none");
+    let queried = resumed.invoke(invocation("query", "query-resolved", task_request, "video"), None, Some("lost-original".into()), control(), None).await.unwrap();
     assert_eq!(data(&queried.response)["status"], "succeeded");
     assert_eq!(calls.lock().unwrap().get("/submit"), Some(&1));
-    assert_eq!(calls.lock().unwrap().get("/resolve"), Some(&1));
+    assert_eq!(resumed_calls.lock().unwrap().get("/resolve"), Some(&1));
+    assert_eq!(resumed_calls.lock().unwrap().get("/query"), Some(&1));
+    assert_eq!(resumed_calls.lock().unwrap().get("/submit"), None);
+    assert_eq!(frozen_bytes(), frozen_before);
     resumed.wait_idle().await.unwrap();
-    server.abort();
+    second_server.abort();
 }
 #[derive(Default)]
 struct Sink(Mutex<Vec<Value>>);
@@ -323,6 +376,13 @@ impl EventSink for Sink {
     }
 }
 async fn server() -> (
+    String,
+    Arc<Mutex<BTreeMap<String, usize>>>,
+    tokio::task::JoinHandle<()>,
+) {
+    server_with_auth(true).await
+}
+async fn server_with_auth(require_auth: bool) -> (
     String,
     Arc<Mutex<BTreeMap<String, usize>>>,
     tokio::task::JoinHandle<()>,
@@ -354,9 +414,11 @@ async fn server() -> (
                     .nth(1)
                     .unwrap()
                     .to_owned();
-                assert!(text
-                    .to_ascii_lowercase()
-                    .contains(&format!("authorization: bearer {KEY}")));
+                if require_auth {
+                    assert!(text.to_ascii_lowercase().contains(&format!("authorization: bearer {KEY}")));
+                } else {
+                    assert!(!text.to_ascii_lowercase().contains("authorization:"));
+                }
                 let length = text
                     .lines()
                     .find_map(|l| {

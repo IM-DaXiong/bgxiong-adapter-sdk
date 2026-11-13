@@ -9,6 +9,7 @@ pub mod events;
 pub mod http;
 pub mod http_stream;
 pub mod media;
+pub mod managed_route;
 pub mod policy;
 pub mod resolution;
 pub mod session;

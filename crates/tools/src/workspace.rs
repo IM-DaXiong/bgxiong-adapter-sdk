@@ -22,6 +22,8 @@ use zeroize::Zeroizing;
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Config {
+    #[serde(default)]
+    pub managed_recovery_route: Option<bgx_adapter_v2_reference_host::managed_route::ManagedRecoveryRoute>,
     pub binding_id: String,
     pub binding_revision: u64,
     pub configuration_ref: String,

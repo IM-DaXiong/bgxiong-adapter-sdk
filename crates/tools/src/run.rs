@@ -675,6 +675,9 @@ async fn execute_inner(
         ReferenceHost::new(provision, package, binding)
     }
     .map_err(host_error)?;
+    let host = if let Some(route) = &config.managed_recovery_route {
+        host.with_managed_recovery_route(route.clone())
+    } else { host };
     let directory = diagnostic_directory(&workspace, input["requestId"].as_str().unwrap())?;
     let auditor = crate::host_channel::AuditChannel::open(&directory, args.host_channel).await?;
     let host = host.with_before_send(Arc::new(auditor));

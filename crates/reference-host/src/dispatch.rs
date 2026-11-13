@@ -165,6 +165,7 @@ pub struct ReferenceHost {
     client: WorkerClient,
     active: Arc<Active>,
     before_send: Option<Arc<dyn crate::before_send::BeforeSendSink>>,
+    managed_recovery_route: Option<crate::managed_route::ManagedRecoveryRoute>,
 }
 struct Prepared {
     context: Option<Arc<ValidatedOperationInput>>,
@@ -229,6 +230,7 @@ impl ReferenceHost {
             }),
             client,
             before_send: None,
+            managed_recovery_route: None,
             active: Arc::new(Active {
                 requests: Mutex::new(BTreeSet::new()),
                 cleanup_failures: Mutex::new(None),
@@ -238,6 +240,11 @@ impl ReferenceHost {
     }
     pub fn with_before_send(mut self, sink: Arc<dyn crate::before_send::BeforeSendSink>) -> Self {
         self.before_send = Some(sink);
+        self
+    }
+    /// Trusted embedding-host permission; never supplied by the guest or frozen request.
+    pub fn with_managed_recovery_route(mut self, route: crate::managed_route::ManagedRecoveryRoute) -> Self {
+        self.managed_recovery_route = Some(route);
         self
     }
     pub fn catalog(&self) -> Result<Vec<CapabilityView>> {
@@ -353,6 +360,13 @@ impl ReferenceHost {
         }
         let i = encode(&invocation);
         SchemaRegistry::validate_public("invocation", &i).map_err(cv)?;
+        if self.managed_recovery_route.is_some() && i["operation"] != "capabilities" {
+            let payload: Value = serde_json::from_str(i["payloadJson"].as_str().unwrap()).map_err(|_|fail("INVALID_INPUT","Invalid route payload"))?;
+            if !matches!(i["operation"].as_str(), Some("query" | "cancel"))
+                && !(i["operation"] == "probe" && payload["kind"] == "submission_resolution") {
+                return Err(fail("PERMISSION_DENIED","Managed recovery route cannot authorize a new submission or other operation"));
+            }
+        }
         let scope = self.scope(i["requestId"].as_str().unwrap());
         let (publisher, mut receiver) = events::channel(
             self.inner.package.verified(),
@@ -407,9 +421,25 @@ impl ReferenceHost {
                 let operation = prepared.context.as_ref().and_then(|c| c.operation()["id"].as_str()).unwrap_or(i["operation"].as_str().unwrap()).to_owned();
                 http.with_before_send(sink.clone(), operation)
             } else { http };
+            let http = if let Some(route) = &self.managed_recovery_route {
+                if i["operation"] == "capabilities" { http } else {
+                    let session = prepared.session.as_ref().ok_or_else(||fail("PERMISSION_DENIED","Recovery route requires an original session"))?;
+                    route.authorize(&i, lock(session)?.checkpoint()).map_err(native)?;
+                    if !self.inner.package.verified().enabled_features().contains("submission-resolution-v1") {
+                        return Err(fail("PERMISSION_DENIED","Recovery route requires the original durable submission capability"));
+                    }
+                    http.with_managed_recovery_route(route.clone())
+                }
+            } else { http };
             let http = Arc::new(http);
             let inner=self.inner.clone();let owner=scope.clone();let trace=blocking(move||Trace::new(&inner,&owner)).await?;
             trace.emit(json!({"stage":"dispatch","operation":i["operation"],"requestId":scope.request_id}),self.inner.snapshot.clone()).await?;
+            if i["operation"] != "capabilities" {
+                if let Some(route) = &self.managed_recovery_route {
+                    trace.emit(json!({"stage":"managed_recovery_route","requestId":scope.request_id,
+                        "route":route.audit()}),self.inner.snapshot.clone()).await?;
+                }
+            }
             let kernel=Kernel{metadata_only:i["operation"]=="probe" && serde_json::from_str::<Value>(i["payloadJson"].as_str().unwrap()).map_err(|_|fail("INVALID_INPUT","Invalid probe payload"))?["kind"]=="operation_preflight",inner:self.inner.clone(),scope:scope.clone(),http:http.clone(),streams:HttpStreams::new(http,self.inner.package.verified().enabled_features().clone()),publisher:publisher.clone(),context:prepared.context.clone(),session:prepared.session.clone(),root_id:prepared.root_id.clone(),trace:trace.clone()};
             let identity=serde_json::from_value(encode(self.inner.package.verified().identity())).map_err(|_|fail("INTERNAL_ERROR","Cannot encode verified package identity"))?;
             let worker=async{
