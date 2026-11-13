@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "8cf24a3030366a78202312659e7ef21105e6bd1348dcc5884afcf15dd0db4a17",
+      "sha256": "c3c207fd947bffdf5621f071f3bb6e242f77051b0c3197d2df4d5e28ec8c5873",
       "required": true
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "crates/validator/tests/capability_registry.rs",
       "target": "crates/validator/tests/capability_registry.rs",
-      "sha256": "6ae2c07b300c36fb5ac6909ee3a96e9d25fbe018a7b763e65bb59f7c1d282145",
+      "sha256": "1263c8353fb705a67293010e4e35a3e15ba2f650ecb9eeb6013612de865d44a6",
       "required": true
     },
     {
@@ -907,7 +907,7 @@
     {
       "source": "protocol/vendor-adapter-protocol.json",
       "target": "protocol/vendor-adapter-protocol.json",
-      "sha256": "e095c5da10baefbb48e2aa381399c011e6aa83a2555f61aa627afbf1cf195948",
+      "sha256": "44c76f5d273e7f5a2fe4edaf7f288b56d0f1668fac6f104070d6499d7f551dd2",
       "required": true
     },
     {
@@ -1616,6 +1616,30 @@
       "source": "crates/media/src/lib.rs",
       "target": "crates/media/src/lib.rs",
       "sha256": "ea25ca4bbbee3f785e11750e6e73203b449b8e2a835e77a9bb51d43c1c6cfaf7",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/README.md",
+      "target": "profiles/speech-analysis-v1/README.md",
+      "sha256": "643d08b222e8a461955c4b6fd8d7246dccd992cdd60ccbd00e39fd865ae1dc95",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/diarize.input.schema.json",
+      "target": "profiles/speech-analysis-v1/diarize.input.schema.json",
+      "sha256": "c2d18acd6d667a6d6b5d265e87ac5a6da7fcee4429d26f2337568e1bad10c94f",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/diarize.output.schema.json",
+      "target": "profiles/speech-analysis-v1/diarize.output.schema.json",
+      "sha256": "42355d8b291c4624d3c761a6176e4ced7adadf7bc9e53333b8067e5e58893cfa",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/resume.schema.json",
+      "target": "profiles/speech-analysis-v1/resume.schema.json",
+      "sha256": "f921c5cc7d877dd004f220fea6304d260c908ce45a2898e53bbd95b38a98e327",
       "required": true
     }
   ]

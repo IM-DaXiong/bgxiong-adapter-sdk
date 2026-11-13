@@ -71,3 +71,8 @@ v2 是主版本合同，不能用 v1 crate/worker 接受新增字段，不能以
 - 不声称任何未实测真实厂商 LIVE 可用。形式可解析、离线缓存可用、参考宿主或浏览器可打开，都不等于最终独立开箱验收完成。
 
 正式发行时应以真实版本、候选摘要和完成证据更新本节；本文不创建版本 tag、不推送或发布任何远端产物。
+## Speech analysis profile candidate — 2026-11-13
+
+- Publish `speech.diarize` / `std/speech.diarize@1` using the existing six operations, authorized audio media, structured results and durable resume tokens. Source-time intervals, anonymous speaker IDs and explicit overlap-detector support are shared contracts.
+- The focused capability-registry test validates source anchors, media references and required capability limitations. This does not mark model accuracy, host installation or the complete SDK release as validated.
+

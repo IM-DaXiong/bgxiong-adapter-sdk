@@ -45,7 +45,8 @@
     "video.generate",
     "audio.synthesize",
     "video.speech",
-    "video.edit"
+    "video.edit",
+    "speech.diarize"
   ],
   "standardProfiles": [
     {
@@ -94,6 +95,22 @@
       "resumeSchema": {
         "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-v1/resume.schema.json",
         "digest": "98a2bc32dca85855e3ddbb0ded417b4d7947f93c7a904eeec6af879b51e7de2a"
+      }
+    },
+    {
+      "operationId": "std/speech.diarize",
+      "operationVersion": 1,
+      "inputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/diarize.input.schema.json",
+        "digest": "c2d18acd6d667a6d6b5d265e87ac5a6da7fcee4429d26f2337568e1bad10c94f"
+      },
+      "outputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/diarize.output.schema.json",
+        "digest": "42355d8b291c4624d3c761a6176e4ced7adadf7bc9e53333b8067e5e58893cfa"
+      },
+      "resumeSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/resume.schema.json",
+        "digest": "f921c5cc7d877dd004f220fea6304d260c908ce45a2898e53bbd95b38a98e327"
       }
     }
   ],

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/resume.schema.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "sourceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "jobId": {"type": "string", "minLength": 1}
+  },
+  "required": ["schemaVersion", "sourceFingerprint", "jobId"],
+  "additionalProperties": false
+}

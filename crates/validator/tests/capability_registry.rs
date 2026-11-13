@@ -206,3 +206,20 @@ fn standard_speech_minimum_optional_fields_and_frozen_digest() {
     wrong_version["operations"][0]["version"]=json!(2);
     assert!(validate_contract(&serde_json::from_value(wrong_version).unwrap()).is_err());
 }
+
+#[test]
+fn speech_diarization_profile_preserves_source_anchors_and_explicit_overlap_support() {
+    use bgx_adapter_v2_validator::{SchemaRegistry,identity};
+    identity::validate_capability_namespace("local.test", "speech.diarize").unwrap();
+    identity::validate_operation_namespace("local.test", "std/speech.diarize").unwrap();
+    let sources=[include_str!("../../../profiles/speech-analysis-v1/diarize.input.schema.json"),include_str!("../../../profiles/speech-analysis-v1/diarize.output.schema.json"),include_str!("../../../profiles/speech-analysis-v1/resume.schema.json")];
+    let registry=SchemaRegistry::register(sources.iter().map(|s| {let v:Value=serde_json::from_str(s).unwrap();(v["$id"].as_str().unwrap().into(),s.to_string(),hash_bytes(s.as_bytes()))}).collect()).unwrap();
+    let base="https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/";
+    let input=json!({"schemaVersion":1,"audio":{"mediaId":"authorized-audio"},"sourceFingerprint":"a".repeat(64),"durationMs":3600000,"speakerCount":2});
+    registry.validate(&format!("{base}diarize.input.schema.json"),&input).unwrap();
+    let mut bad=input.clone();bad["audio"]=json!({"path":"C:/private.wav"});assert!(registry.validate(&format!("{base}diarize.input.schema.json"),&bad).is_err());
+    let output=json!({"schemaVersion":1,"sourceFingerprint":"a".repeat(64),"durationMs":3600000,"speakers":[{"id":"speaker-1"}],"turns":[{"startMs":3590000,"endMs":3599000,"speakerId":"speaker-1"}],"overlapDetection":"unsupported","warnings":[]});
+    registry.validate(&format!("{base}diarize.output.schema.json"),&output).unwrap();
+    let mut bad=output;bad.as_object_mut().unwrap().remove("overlapDetection");assert!(registry.validate(&format!("{base}diarize.output.schema.json"),&bad).is_err());
+    registry.validate(&format!("{base}resume.schema.json"),&json!({"schemaVersion":1,"sourceFingerprint":"a".repeat(64),"jobId":"retained-job"})).unwrap();
+}
