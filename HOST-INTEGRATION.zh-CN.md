@@ -180,3 +180,9 @@ SDK 2.1.4 的 before-send 审计保留查询键及其顺序，查询值统一写
 两个 origin 必须是带明确非默认端口的规范 HTTP 数字 loopback（不接受 localhost、userinfo、额外路径/query/fragment），同一次 network grant 必须显式授权两端。HTTP owner 仅替换 origin，保留方法、path、query、body 和结果媒体回收；不自动重定向或重试。租约最多五分钟，发送前复核过期；禁止 credential、generatedHeaders，明文请求头仅允许 Content-Type、Accept、Range。原服务的实例/域校验不能关闭。当前物理实例身份及逻辑/物理 origin 写入原 dispatch trace 和 HTTP audit；before-send 保持原闭合 schema，不追加路由字段。
 
 `submissionScope` 是原持久服务域，不是端口别名。适配包须继续对返回的 store/domain、原 job、摘要和结果核验；新存储、404、连接失败、超时都不证明未受理。负面解析仍要求原域原子墓碑阻止晚到提交。宿主传入新实例租约不修改历史配置、恢复令牌、结果或远端费用事实。
+
+# Opaque 文件上传名称（SDK 2.3.0）
+
+适配包声明 requiredFeatures/optionalFeatures 中的 `opaque-file-upload-name-v1`，宿主 supportedFeatures 同时提供它才会启用。仅测量结果为 kind=file、mime=application/octet-stream、持久文件名扩展为 bin 的租约，可以使用不同的合法 multipart fileName。别名只用于 HTTP Content-Disposition，内容、MIME、摘要、持久对象和回执不变；不表示 SDK 已识别或验证目标格式。接收端负责该格式的业务解析。
+
+已识别图片、音频、视频及其它已识别文件仍严格匹配测量扩展名；客户端不能伪造 MIME、路径、其它请求的租约，网络范围也不因别名扩大。未协商或旧任务继续保持原限制，不能用改历史身份启用新能力。原 WIT、协议版本和媒体 DTO 不变。

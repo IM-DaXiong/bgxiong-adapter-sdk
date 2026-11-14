@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.2.2",
+  "sdkRelease": "2.3.0",
   "projectLicense": "LicenseRef-Proprietary",
   "purpose": "Exact candidate source/assets allowlist. Null is pending generation, never a successful hash. Export refuses null/missing/changed inputs; refresh hashes only for these already enumerated exact paths.",
   "binaryInputs": {
@@ -43,7 +43,7 @@
     {
       "source": "CHANGELOG.md",
       "target": "CHANGELOG.md",
-      "sha256": "14a84aa4904b60a3a8fcffcca91bd3ec33306f48e30c63afcfee2d14b6caff03",
+      "sha256": "d8e7713b5c05354bc8971724388f4f6c974c55ddaefa61b02f837b0fb73e73ee",
       "required": true
     },
     {
@@ -61,7 +61,7 @@
     {
       "source": "Cargo.lock",
       "target": "Cargo.lock",
-      "sha256": "b2da83a2e09cc31ec118f30c03db5d6de25c0b09ec6cb0569d419cf49bdd7c45",
+      "sha256": "909e3efcbd0430151be0c006eafbe9676f0df22980dbc4ecdb1df1c48ebf68f2",
       "required": true
     },
     {
@@ -85,7 +85,7 @@
     {
       "source": "HOST-INTEGRATION.zh-CN.md",
       "target": "HOST-INTEGRATION.zh-CN.md",
-      "sha256": "ab2cb91e8dddb139af3f8409d33572f943ff51d54656a272a848d924cd1e627f",
+      "sha256": "407c4ce1f87000964854d7d75cfa217ccc7a83bfb439b6217d3a56ee5a8cfe94",
       "required": true
     },
     {
@@ -139,7 +139,7 @@
     {
       "source": "crates/reference-host/Cargo.toml",
       "target": "crates/reference-host/Cargo.toml",
-      "sha256": "ebf300e16a86afa656c837f3207cb3ee73916055d81b75abcb553974b610dc12",
+      "sha256": "2aab3310da4a6d9c69dbebc5704b0a31d45ce27a34a3ac9b0a7f4b0f0e16877a",
       "required": true
     },
     {
@@ -187,7 +187,7 @@
     {
       "source": "crates/reference-host/src/http.rs",
       "target": "crates/reference-host/src/http.rs",
-      "sha256": "44986454e6a2e2c59c5caf8ea66cd3486a7e8f723f4fb62d5b1f6e1dcb38380e",
+      "sha256": "5f8142740c2563b2ba65ed0745b506e39aab8bf93d4173b61a6b9c80ee633729",
       "required": true
     },
     {
@@ -211,7 +211,7 @@
     {
       "source": "crates/reference-host/src/policy.rs",
       "target": "crates/reference-host/src/policy.rs",
-      "sha256": "34176e82c44c3434f204e937fcf7b225a0a3c736c23701942040d0fc8999afd2",
+      "sha256": "ffac4c5ea21a4bde802e450d41da807c6d228a1ccb6dbe4407fdbd26f132fa3f",
       "required": true
     },
     {
@@ -253,7 +253,7 @@
     {
       "source": "crates/reference-host/tests/policy.rs",
       "target": "crates/reference-host/tests/policy.rs",
-      "sha256": "8f51b0fdcfc23bfeb6f63beb3c27c08210653aae81176a96a5ec8b4e8c006639",
+      "sha256": "b60799d95752695cca14fc804597c91f05529a45b0201b5a3b84fac7e022adf5",
       "required": true
     },
     {
@@ -319,7 +319,7 @@
     {
       "source": "crates/tools/Cargo.toml",
       "target": "crates/tools/Cargo.toml",
-      "sha256": "45de27a9222a7d0bb2cb9793f41ffbb941bbbad9579b0e3f9189d98c9c65b9f0",
+      "sha256": "64ce1b24e24a621d4237714282b92df4377e33b1205c1d2cdba109473e60a45f",
       "required": true
     },
     {
@@ -889,7 +889,7 @@
     {
       "source": "protocol/host-feature-catalog.json",
       "target": "protocol/host-feature-catalog.json",
-      "sha256": "d2e6fc0ab1a5c7b182b8051aae8faf29d5f31d1a5970c3c92c9513760c89d50b",
+      "sha256": "66752bc4e59419a2c3e2115c3f84bbc7b3aa17ba633c3a3ca3d33e51f9b94b6b",
       "required": true
     },
     {
@@ -1147,7 +1147,7 @@
     {
       "source": "templates/rust/template-lock.json",
       "target": "templates/rust/template-lock.json",
-      "sha256": "9a4b3a69a2e604dacf0f2d1f1fe7850b5b8f64c57b4441c603a74e01282dd102",
+      "sha256": "194d725ee089800cdefba557b530e46a54c267ccea4d740b71f93682ef93708d",
       "required": true
     },
     {
@@ -1189,7 +1189,7 @@
     {
       "source": "templates/template-lock.json",
       "target": "templates/template-lock.json",
-      "sha256": "9a4b3a69a2e604dacf0f2d1f1fe7850b5b8f64c57b4441c603a74e01282dd102",
+      "sha256": "194d725ee089800cdefba557b530e46a54c267ccea4d740b71f93682ef93708d",
       "required": true
     },
     {
@@ -1676,6 +1676,12 @@
       "source": "crates/reference-host/src/managed_route.rs",
       "target": "crates/reference-host/src/managed_route.rs",
       "sha256": "b65e665d0d092b2bcd103df8e83896d1725e6200485bc079a264608aa57397f1",
+      "required": true
+    },
+    {
+      "source": "docs/20261114-opaque-file-upload-plan.md",
+      "target": "docs/20261114-opaque-file-upload-plan.md",
+      "sha256": "865909cdf94704cd95fd714ae536ea80dc863967e6fb0cb167b50c60d3057e03",
       "required": true
     }
   ]

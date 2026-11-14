@@ -2,6 +2,11 @@
   "schemaVersion": 2,
   "features": [
     {
+      "id": "opaque-file-upload-name-v1",
+      "requiredImports": [],
+      "semantics": "A negotiated opaque file/octet-stream/bin lease may use a valid multipart basename alias; recognized media extensions, measured MIME, bytes and durable identity remain unchanged"
+    },
+    {
       "id": "submission-rejection-v1",
       "requiredImports": [],
       "semantics": "Original submit context may explicitly certify non-acceptance through an atomic checkpoint write; error codes never imply rejection"

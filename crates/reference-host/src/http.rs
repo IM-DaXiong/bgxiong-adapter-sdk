@@ -51,7 +51,7 @@ impl MediaAccess {
         &self,
         handle: &str,
         control: &Control,
-    ) -> Result<(reqwest::Body, u64, String, String)> {
+    ) -> Result<(reqwest::Body, u64, String, String, bool)> {
         let h = handle.to_string();
         let (stat, file_name) = self
             .run(move |b, s| Ok((b.info(s, &h)?, b.file_name(s, &h)?)))
@@ -97,6 +97,7 @@ impl MediaAccess {
             length,
             stat.r#mime,
             file_name,
+            matches!(stat.r#kind, bgx_adapter_v2_ports::wire::HostPortCallV2MediaStatKind::V3), // wire: file
         ))
     }
 }
@@ -299,7 +300,7 @@ impl HttpBroker {
                         request = request.body(bytes);
                     }
                     "media" => {
-                        let (body, length, _, _) = self
+                        let (body, length, _, _, _) = self
                             .media
                             .body(plan["body"]["handle"].as_str().unwrap(), &control)
                             .await?;
@@ -332,11 +333,16 @@ impl HttpBroker {
                                         "Multipart file name must be a basename",
                                     ));
                                 }
-                                let (body, length, mime, measured_name) = self
+                                let (body, length, mime, measured_name, opaque_kind) = self
                                     .media
                                     .body(part["handle"].as_str().unwrap(), &control)
                                     .await?;
-                                if std::path::Path::new(filename).extension()!=std::path::Path::new(&measured_name).extension(){return Err(error("INVALID_INPUT","Multipart file extension differs from measured media format"));}
+                                // Opaque bytes have no detected format. A negotiated transport
+                                // alias does not rename the durable object or assert a MIME.
+                                let opaque_alias = self.policy.permits_opaque_file_upload_names()
+                                    && opaque_kind && mime == "application/octet-stream"
+                                    && std::path::Path::new(&measured_name).extension().is_some_and(|ext| ext == "bin");
+                                if !opaque_alias && std::path::Path::new(filename).extension()!=std::path::Path::new(&measured_name).extension(){return Err(error("INVALID_INPUT","Multipart file extension differs from measured media format"));}
                                 if part["mime"] != mime {
                                     return Err(error(
                                         "INVALID_INPUT",

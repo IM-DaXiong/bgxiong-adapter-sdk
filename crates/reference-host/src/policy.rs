@@ -39,6 +39,7 @@ pub struct NetworkPolicy {
     denied_hosts: Vec<String>,
     denied_networks: Vec<IpNet>,
     auth_modes: Vec<String>,
+    opaque_file_upload_names: bool,
 }
 pub struct Destination {
     pub url: Url,
@@ -133,6 +134,7 @@ impl NetworkPolicy {
                 .any(|v| v == "authorization");
         Ok(Self {
             scope,
+            opaque_file_upload_names: package.enabled_features().contains("opaque-file-upload-name-v1"),
             origins,
             allow_private,
             embedded_authorization,
@@ -150,6 +152,9 @@ impl NetworkPolicy {
     }
     pub fn scope(&self) -> &LeaseScope {
         &self.scope
+    }
+    pub(crate) fn permits_opaque_file_upload_names(&self) -> bool {
+        self.opaque_file_upload_names
     }
     pub fn auth_modes(&self) -> &[String] {
         &self.auth_modes

@@ -1,5 +1,10 @@
 # 变更记录
 
+## 2.3.0 Opaque 文件上传名称协商 — 2026-11-14
+
+- 新增 `opaque-file-upload-name-v1`：未知格式 file/octet-stream/bin 素材可在 multipart 使用合法别名，保留原 MIME、摘要、持久文件名和租约。已识别格式仍须匹配测量扩展名；旧包及冻结任务不变。
+- 不改变协议 2、WIT 或媒体描述符；完整条件及定向验收见 `docs/20261114-opaque-file-upload-plan.md`。
+
 ## 2.2.2 冷恢复审计通道修正 — 2026-11-14
 
 - 保持既有闭合 before-send 公共 schema，路由审计保留在正式 dispatch trace 与 HTTP audit；不向旧通道添加未登记字段。

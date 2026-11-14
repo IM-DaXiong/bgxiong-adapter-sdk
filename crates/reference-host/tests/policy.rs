@@ -18,7 +18,10 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 fn package(embedded: bool) -> VerifiedPackage {
-    let manifest = json!({"schemaVersion":2,"pluginId":"local.policy","displayName":"Policy tests","version":"1.0.0","protocolRange":{"min":2,"max":2},"requiredFeatures":[],"optionalFeatures":[],"language":"rust","entry":"adapter.wasm","artifactSha256":hash_bytes(b"fixture"),"publisherId":null,"publisherKeyId":null,
+    package_features(embedded, &[])
+}
+fn package_features(embedded: bool, features: &[&str]) -> VerifiedPackage {
+    let manifest = json!({"schemaVersion":2,"pluginId":"local.policy","displayName":"Policy tests","version":"1.0.0","protocolRange":{"min":2,"max":2},"requiredFeatures":features,"optionalFeatures":[],"language":"rust","entry":"adapter.wasm","artifactSha256":hash_bytes(b"fixture"),"publisherId":null,"publisherKeyId":null,
         "requestedCapabilities":{"endpointPolicy":["userConfigurable","allowPrivateNetwork"],"networkHosts":[],"allowPrivateNetwork":true,"auth":["none","bearer","custom-header","jwt-hs256","hmac-sha256","hmac-sha256-credential"],"mediaSlots":["file","image"],"stateBytes":0,"embeddedHeaders":if embedded{vec!["authorization"]}else{vec![]}},"limits":{"memoryBytes":33554432,"fuel":1000,"wallMs":100,"outputBytes":1048576}});
     let bytes = serde_json::to_vec(&manifest).unwrap();
     let hashes = BTreeMap::from([
@@ -29,6 +32,8 @@ fn package(embedded: bool) -> VerifiedPackage {
         .iter()
         .map(|(k, v)| format!("{v} {k}\n"))
         .collect::<String>();
+    let mut trust = TrustContext::default();
+    trust.supported_features.extend(features.iter().map(|feature| feature.to_string()));
     verify_package(
         &PackageContents {
             manifest_bytes: &bytes,
@@ -36,7 +41,7 @@ fn package(embedded: bool) -> VerifiedPackage {
             signature: None,
             measured_file_hashes: &hashes,
         },
-        &TrustContext::default(),
+        &trust,
     )
     .unwrap()
 }
@@ -322,8 +327,8 @@ impl Service {
             loop {
                 tokio::select! {_=stopping.cancelled()=>break,Some(_)=clients.join_next(),if !clients.is_empty()=>{},accepted=listener.accept()=>{let (mut socket,_)=accepted.unwrap();let captured=recorded.clone();clients.spawn(async move{
                     let mut header=vec![];let mut byte=[0u8;1];while !header.ends_with(b"\r\n\r\n"){if socket.read_exact(&mut byte).await.is_err(){return;}header.push(byte[0]);assert!(header.len()<65536);}let text=String::from_utf8(header).unwrap();let route=text.lines().next().unwrap().split_whitespace().nth(1).unwrap().to_string();let length=text.lines().filter_map(|l|l.split_once(':')).find(|(n,_)|n.eq_ignore_ascii_case("content-length")).map(|(_,v)|v.trim().parse::<usize>().unwrap()).unwrap_or(0);
-                    let mut received=0usize;let mut hash=Sha256::new();let mut buffer=vec![0;65536];while received<length{let count=socket.read(&mut buffer[..(length-received).min(65536)]).await.unwrap();if count==0{return;}hash.update(&buffer[..count]);received+=count;}
-                    captured.lock().unwrap().push(json!({"headers":text,"route":route,"length":received,"digest":hex::encode(hash.finalize())}));
+                    let mut received=0usize;let mut prefix=Vec::new();let mut hash=Sha256::new();let mut buffer=vec![0;65536];while received<length{let count=socket.read(&mut buffer[..(length-received).min(65536)]).await.unwrap();if count==0{return;}prefix.extend_from_slice(&buffer[..count.min(4096usize.saturating_sub(prefix.len()))]);hash.update(&buffer[..count]);received+=count;}
+                    captured.lock().unwrap().push(json!({"headers":text,"route":route,"length":received,"digest":hex::encode(hash.finalize()),"prefix":String::from_utf8_lossy(&prefix)}));
                     if route.starts_with("/hang"){tokio::time::sleep(Duration::from_secs(30)).await;return;}
                     if route.starts_with("/slow-media"){let _=socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 100000\r\nConnection: close\r\n\r\npartial").await;tokio::time::sleep(Duration::from_secs(30)).await;return;}
                     let (status,extra,body)=if route.starts_with("/redirect"){("302 Found","Location: http://127.0.0.1:1/escape\r\n",b"redirect".to_vec())}else if route.starts_with("/large"){("200 OK","",vec![b'x';32768])}else if route.starts_with("/image"){
@@ -439,6 +444,51 @@ async fn actual_loopback_http_uses_the_gate_and_never_follows_escaping_redirects
         .unwrap()["code"],
         "BUDGET_EXCEEDED"
     );
+    service.close().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn opaque_file_upload_alias_requires_negotiation_and_never_retypes_media() {
+    let service = Service::start().await;
+    for enabled in [false, true] {
+        let package = package_features(false, if enabled { &["opaque-file-upload-name-v1"] } else { &[] });
+        let (directory, broker) = broker(&package, &service.origin);
+        let source = directory.path().join("source.bin");
+        let bytes = b"opaque geometry payload\0\x01";
+        std::fs::write(&source, bytes).unwrap();
+        let control = Control::new(None);
+        let c = control.clone();
+        let lease = broker.media.run(move |b,s| b.import_file(s,"geometry",&source,"file",&c)).await.unwrap();
+        assert!(lease.file_name.ends_with(".bin"));
+        let mut upload = plan(&format!("{}/multipart",service.origin));
+        upload["method"] = json!("POST");
+        upload["body"] = json!({"kind":"multipart","parts":[{"kind":"file","name":"image","fileName":"scene.glb","handle":lease.handle,"mime":"application/octet-stream"}]});
+        let before = service.captures.lock().unwrap().len();
+        let result = broker.execute(&serde_json::from_value(upload.clone()).unwrap(),None,&control).await;
+        assert_eq!(result.is_ok(),enabled);
+        assert_eq!(service.captures.lock().unwrap().len(),before+usize::from(enabled));
+        if enabled {
+            let body = service.captures.lock().unwrap()[before]["prefix"].as_str().unwrap().to_string();
+            assert!(body.contains("filename=\"scene.glb\""));
+            assert!(body.contains("application/octet-stream"));
+            assert!(body.as_bytes().windows(bytes.len()).any(|part|part==bytes));
+            for (field,value) in [("mime","model/gltf-binary"),("fileName","../scene.glb"),("handle","foreign") ] {
+                let mut bad = upload.clone();bad["body"]["parts"][0][field]=json!(value);
+                assert!(broker.execute(&serde_json::from_value(bad).unwrap(),None,&control).await.is_err());
+            }
+            // Even a generic-file lease with recognized bytes retains its measured format.
+            let image = directory.path().join("known.png");
+            image::RgbImage::from_pixel(2,2,image::Rgb([20,30,40])).save(&image).unwrap();
+            let c=control.clone();
+            let known=broker.media.run(move |b,s|b.import_file(s,"known",&image,"file",&c)).await.unwrap();
+            upload["body"]["parts"][0]["handle"]=json!(known.handle);
+            upload["body"]["parts"][0]["mime"]=json!(known.stat.r#mime);
+            assert!(broker.execute(&serde_json::from_value(upload).unwrap(),None,&control).await.is_err());
+            assert_eq!(service.captures.lock().unwrap().len(),before+1);
+        }
+        let handle=lease.handle.clone();
+        assert_eq!(broker.media.run(move |b,s|b.file_name(s,&handle)).await.unwrap(),lease.file_name);
+    }
     service.close().await;
 }
 
