@@ -124,7 +124,8 @@ fn contract(
     media_kind: Option<&str>,
     custom_output: Option<&str>,
 ) -> Value {
-    let projection = cfg!(feature = "image-projection") && kind == Some("image");
+    let media_projection = cfg!(feature = "media-projection") && matches!(kind, Some("image" | "video"));
+    let projection = media_projection || (cfg!(feature = "image-projection") && kind == Some("image"));
     let mut input = schema(
         "input",
         &if media_kind.is_some() {
@@ -148,9 +149,11 @@ fn contract(
     if projection {
         let mut definition: Value = serde_json::from_str(input["schemaJson"].as_str().unwrap()).unwrap();
         definition["properties"]["outputProjection"] = json!({"type":"string","enum":["flat","equirectangular360"],"default":"flat"});
+        if media_projection { definition["properties"]["outputProjection"]["enum"].as_array_mut().unwrap().push(json!("equirectangular180")); }
         definition["required"].as_array_mut().unwrap().push(json!("outputProjection"));
         input = schema("input", &definition.to_string());
         output = schema("output", r#"{"$ref":"https://bgxiong.local/vendor-adapter/v2/profiles/image-projection-v1/output.schema.json"}"#);
+        if media_projection { output = schema("output", r#"{"$ref":"https://bgxiong.local/vendor-adapter/v2/profiles/media-projection-v1/output.schema.json"}"#); }
         if asynchronous {
             let mut token: Value = serde_json::from_str(resume["schemaJson"].as_str().unwrap()).unwrap();
             token["properties"]["outputProjection"] = json!({"type":"string","enum":["flat","equirectangular360"]});
@@ -374,7 +377,7 @@ fn usage(snapshot: &Value) -> Outcome<Value> {
         measurements.push(json!({"metric":metric,"unit":"tokens","amount":number(snapshot,metric)?.to_string(),"source":"reported"}));
     }
     measurements.push(json!({"metric":"credits","unit":"credits","amount":text(snapshot,"credits")?,"source":"reported"}));
-    if cfg!(feature = "image-projection") {
+    if cfg!(feature = "image-projection") || cfg!(feature = "media-projection") {
         measurements.push(json!({"metric":format!("{PLUGIN_ID}/reported-cost"),"unit":format!("{PLUGIN_ID}/credits"),"amount":text(snapshot,"credits")?,"source":"reported"}));
     }
     Ok(json!({"measurements":measurements}))
@@ -579,7 +582,7 @@ fn submit(h: &mut dyn Host, request: &Invocation, p: &Value) -> Outcome<Value> {
     };
     let kinds: Vec<&str> = kind.into_iter().collect();
     let mut body = json!({"input":{"prompt":p["input"]["prompt"],"strength":p["input"]["strength"],"outputKinds":kinds},"scenario":text(config,"scenario")?,"delayMs":number(config,"delayMs")?,"chunkDelayMs":number(config,"chunkDelayMs")?});
-    if cfg!(feature = "image-projection") && kind == Some("image") {
+    if (cfg!(feature = "image-projection") && kind == Some("image")) || (cfg!(feature = "media-projection") && matches!(kind, Some("image" | "video"))) {
         body["input"]["outputProjection"] = p["input"]["outputProjection"].clone();
     }
     if operation == "local.examples.sync/stream" {
@@ -623,7 +626,10 @@ fn submit(h: &mut dyn Host, request: &Invocation, p: &Value) -> Outcome<Value> {
             request.r#budget_ms,
         )?);
     }
-    let data = if cfg!(feature = "image-projection") && kind == Some("image") {
+    let data = if cfg!(feature = "media-projection") && matches!(kind, Some("image" | "video")) {
+        let projection = text(&remote, "projection")?;
+        json!({"mediaArtifacts":outputs.iter().map(|o|json!({"mediaId":o["media"]["id"],"role":o["role"],"kind":o["media"]["kind"],"projection":projection})).collect::<Vec<_>>()})
+    } else if cfg!(feature = "image-projection") && kind == Some("image") {
         let projection = text(&remote, "projection")?;
         json!({"imageArtifacts":outputs.iter().map(|o|json!({"mediaId":o["media"]["id"],"role":o["role"],"projection":projection})).collect::<Vec<_>>()})
     } else if operation == "local.examples.sync/analyze" {

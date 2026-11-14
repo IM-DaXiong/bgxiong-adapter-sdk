@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2.4.0 图像与视频投影协商 — 2026-11-14
+
+- 新增必需协商的 `media-projection-v1`：flat/180/360图片和视频，以媒体身份、角色、种类绑定冻结请求投影，按真实解码/探测尺寸校验比例。
+- query、恢复与retained沿原任务校验；缺视频实测尺寸拒绝，不改历史包/任务，不与旧image-projection-v1同时声明。协议2与WIT不变。
+- 中立CLI真实PNG/短视频与错误比例/缺探测反例通过；产品接入和真实模型推理分开验收。见[本批计划与证据范围](docs/20261114-media-projection-plan.md)。
+
 ## 2.3.0 Opaque 文件上传名称协商 — 2026-11-14
 
 - 新增 `opaque-file-upload-name-v1`：未知格式 file/octet-stream/bin 素材可在 multipart 使用合法别名，保留原 MIME、摘要、持久文件名和租约。已识别格式仍须匹配测量扩展名；旧包及冻结任务不变。

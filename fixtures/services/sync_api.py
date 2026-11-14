@@ -327,7 +327,7 @@ class ApiServer(ThreadingHTTPServer):
             raise ApiError(422, "FIXTURE_NOT_CONFIGURED", f"No real {kind} fixture is configured; supply its explicit fixture option")
         record = self.fixtures[kind]
         if projection is not None:
-            require(projection in ("flat", "equirectangular360"), "Unknown image projection")
+            require(projection in ("flat", "equirectangular180", "equirectangular360"), "Unknown visual projection")
             if kind == "image" and projection == "equirectangular360":
                 record = self.store.add_bytes(png_fixture(2), "projection.png", "image/png")
         return {"kind": kind, "url": self.media_origin + "/media/" + record["id"], **record}

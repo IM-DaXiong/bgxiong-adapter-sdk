@@ -52,19 +52,31 @@ fn operation_preflight_binds_catalog_configuration_schema_and_media_summaries() 
     assert!(validate_request(&catalog,reference,&binding,&package,&wrong).is_err());
 }
 fn negotiated_package(required: bool, supported: bool) -> Result<VerifiedPackage,bgx_adapter_v2_validator::ContractError> {
+    negotiated_projection_package(if required {vec!["image-projection-v1"]} else {vec![]}, vec![], supported)
+}
+fn negotiated_projection_package(required: Vec<&str>, optional: Vec<&str>, supported: bool) -> Result<VerifiedPackage,bgx_adapter_v2_validator::ContractError> {
     let mut manifest=json!({"schemaVersion":2,"pluginId":"local.catalog","displayName":"Catalog","version":"1.0.0",
         "protocolRange":{"min":2,"max":2},"requiredFeatures":[],"optionalFeatures":[],"language":"rust",
         "entry":"adapter.wasm","artifactSha256":hash_bytes(b"test"),"publisherId":null,"publisherKeyId":null,
         "requestedCapabilities":{"endpointPolicy":["userConfigurable"],"networkHosts":[],"allowPrivateNetwork":false,
         "auth":["none"],"mediaSlots":[],"stateBytes":0,"embeddedHeaders":[]},
         "limits":{"memoryBytes":65536,"fuel":1000,"wallMs":100,"outputBytes":256}});
-    if required {manifest["requiredFeatures"]=json!(["image-projection-v1"]);}
+    manifest["requiredFeatures"]=json!(required);manifest["optionalFeatures"]=json!(optional);
     let bytes=serde_json::to_vec(&manifest).unwrap();
     let files=BTreeMap::from([("manifest.json".into(),hash_bytes(&bytes)),("adapter.wasm".into(),hash_bytes(b"test"))]);
     let inventory=files.iter().map(|(k,v)|format!("{v} {k}\n")).collect::<String>();
     let mut trust=TrustContext::default();
-    if supported {trust.supported_features.insert("image-projection-v1".into());}
+    if supported {trust.supported_features.extend(["image-projection-v1".into(),"media-projection-v1".into()]);}
     verify_package(&PackageContents{manifest_bytes:&bytes,hash_manifest_bytes:inventory.as_bytes(),signature:None,measured_file_hashes:&files},&trust)
+}
+
+#[test]
+fn media_projection_requires_unambiguous_host_negotiation_before_execution() {
+    assert_eq!(negotiated_projection_package(vec!["media-projection-v1"],vec![],false).err().unwrap().code,"UNSUPPORTED_FEATURE");
+    assert!(negotiated_projection_package(vec!["media-projection-v1"],vec![],true).unwrap().enabled_features().contains("media-projection-v1"));
+    assert_eq!(negotiated_projection_package(vec![],vec!["media-projection-v1"],true).err().unwrap().code,"INVALID_PACKAGE");
+    assert_eq!(negotiated_projection_package(vec!["media-projection-v1","image-projection-v1"],vec![],true).err().unwrap().code,"INVALID_PACKAGE");
+    assert!(invocation_features(&std::collections::BTreeSet::from(["media-projection-v1".into()])).is_empty());
 }
 
 #[test]

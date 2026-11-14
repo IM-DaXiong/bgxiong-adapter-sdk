@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 image-projection = []
+media-projection = []
 
 [dependencies]
 bgx-adapter-v2-sdk = { path = "../../sdk/rust" }

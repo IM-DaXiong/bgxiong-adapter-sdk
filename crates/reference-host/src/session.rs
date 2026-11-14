@@ -207,6 +207,7 @@ impl Session {
             return Err(invalid());
         }
         let context = bgx_adapter_v2_validator::image_projection::enable(validate_input(&self.frozen.contract, request).map_err(|_| invalid())?, &self.features).map_err(|_| invalid())?;
+        let context = bgx_adapter_v2_validator::media_projection::enable(context, &self.features).map_err(|_| invalid())?;
         bgx_adapter_v2_validator::video_speech::enable(context, &self.features).map_err(|_| invalid())
     }
     /// Offline completion adjudication; never grants submission or query authority.
@@ -349,9 +350,12 @@ impl Session {
                 &broker.validation_context(scope),
             )
             .map_err(|_| invalid())?;
-            if output["media"]["kind"] == "image" {
+            if matches!(output["media"]["kind"].as_str(), Some("image" | "video")) {
                 let stat = broker.info(scope, output["media"]["handle"].as_str().unwrap()).map_err(|_| invalid())?;
-                bgx_adapter_v2_validator::image_projection::validate_geometry(context, stat.r#width, stat.r#height).map_err(|_| invalid())?;
+                if output["media"]["kind"] == "image" {
+                    bgx_adapter_v2_validator::image_projection::validate_geometry(context, stat.r#width, stat.r#height).map_err(|_| invalid())?;
+                }
+                bgx_adapter_v2_validator::media_projection::validate_geometry(context, output["media"]["kind"].as_str().unwrap(), stat.r#width, stat.r#height).map_err(|_| invalid())?;
             }
             let identity = value(
                 &broker
@@ -584,6 +588,7 @@ impl Session {
                 serde_json::from_value(request).map_err(|_| invalid())?;
             let original =
                 bgx_adapter_v2_validator::image_projection::enable(validate_input(&self.frozen.contract, &request).map_err(|_| invalid())?, &self.features).map_err(|_| invalid())?;
+            let original = bgx_adapter_v2_validator::media_projection::enable(original, &self.features).map_err(|_| invalid())?;
             let original = bgx_adapter_v2_validator::video_speech::enable(original, &self.features).map_err(|_| invalid())?;
             let mut host = media.validation_context(scope);
             for proof in &self.frozen.uploads {

@@ -2,6 +2,11 @@
   "schemaVersion": 2,
   "features": [
     {
+      "id": "media-projection-v1",
+      "requiredImports": [],
+      "semantics": "Declared flat/180/360 image and video projection, per-media identity and decoded or probed equirectangular dimensions"
+    },
+    {
       "id": "opaque-file-upload-name-v1",
       "requiredImports": [],
       "semantics": "A negotiated opaque file/octet-stream/bin lease may use a valid multipart basename alias; recognized media extensions, measured MIME, bytes and durable identity remain unchanged"

@@ -1,6 +1,6 @@
 # 独立宿主接入指南
 
-SDK 2.1.1全景候选新增[公开图片投影profile](profiles/image-projection-v1/README.zh-CN.md)。宿主只有在完整消费data、逐图身份、实际尺寸与恢复结果后，才能在自己的supportedFeatures公布`image-projection-v1`；参考宿主已实现这一校验链，应用UI不因此自动接通。Invocation.enabledFeatures使用`validator::package::invocation_features`投影出的host-import子集，完整协商集合仍供能力注册和恢复使用。无新增WIT字段，不能往旧枚举硬塞语义profile名字。
+SDK 2.4.0新增[图像与视频投影profile](profiles/media-projection-v1/README.zh-CN.md)。宿主完整消费mediaArtifacts、逐项身份/种类、实测尺寸、任务恢复与播放元数据后，才能公布`media-projection-v1`；参考宿主的验证不等于应用UI已接通。视频显式配置ProbeTool，缺尺寸不能推断为全景。旧[图片投影profile](profiles/image-projection-v1/README.zh-CN.md)保持原合同，新包不得同时要求两个profile。Invocation.enabledFeatures只使用`validator::package::invocation_features`投影出的host-import子集，完整协商集合用于注册与恢复；不往WIT旧枚举塞语义profile名字。
 
 消费retained时同时核原response和checkpointResult；语义验证不能只看toolStatus。媒体格式来自broker实际原件，与projection独立。数据就绪后由产品短事务登记，不允许把取回失败误报远端生成失败或自动重提。
 

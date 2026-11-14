@@ -179,6 +179,7 @@ pub fn validate_input(
     Ok(ValidatedOperationInput {
         video_speech: false,
         image_projection: false,
+        media_projection: false,
         contract: c,
         operation: op,
         request: input,

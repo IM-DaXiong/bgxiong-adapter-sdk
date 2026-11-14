@@ -93,8 +93,12 @@ pub fn verify_package(contents: &PackageContents<'_>, trust: &TrustContext) -> R
         if trust.denylisted_hosts.contains(host.as_str().unwrap()) { return Err(ContractError::new("PERMISSION_DENIED", "/networkHosts", "host is denylisted")); }
     }
     let mut enabled = BTreeSet::new();
-    if manifest["optionalFeatures"].as_array().unwrap().iter().any(|f| f == crate::image_projection::FEATURE) {
-        return Err(ContractError::new("INVALID_PACKAGE", "/optionalFeatures", "image projection must be a required feature"));
+    if manifest["optionalFeatures"].as_array().unwrap().iter().any(|f| f == crate::image_projection::FEATURE || f == crate::media_projection::FEATURE) {
+        return Err(ContractError::new("INVALID_PACKAGE", "/optionalFeatures", "projection must be a required feature"));
+    }
+    let required = manifest["requiredFeatures"].as_array().unwrap();
+    if required.iter().any(|f| f == crate::image_projection::FEATURE) && required.iter().any(|f| f == crate::media_projection::FEATURE) {
+        return Err(ContractError::new("INVALID_PACKAGE", "/requiredFeatures", "only one projection profile can be negotiated"));
     }
     let features: Value = serde_json::from_str(include_str!("../../../protocol/host-feature-catalog.json")).expect("published feature catalog");
     let known = |feature: &str| features["features"].as_array().unwrap().iter().any(|f| f["id"] == feature);

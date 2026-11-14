@@ -1,6 +1,6 @@
 # 独立适配包制作指南
 
-SDK 2.1.1全景候选的新增合同见[image-projection-v1](profiles/image-projection-v1/README.zh-CN.md)。同步/异步中立样例分别在`examples/sync-api`和`examples/cloud-task`通过Cargo feature `image-projection`启用；默认样例保持原模式。构建该变体时，运行包manifest必须额外要求`image-projection-v1`，重新测量WASM与manifest摘要，不能直接沿用默认样例inventory。保留旧包版本/摘要；候选完整验收状态见本轮计划，不代表主应用已接通。
+SDK 2.4.0的[media-projection-v1](profiles/media-projection-v1/README.zh-CN.md)支持180/360图片与视频。`examples/sync-api`通过Cargo feature `media-projection`启用中立图视频样例，manifest必须要求同名profile，并重新测量WASM/manifest摘要；不能与旧image-projection feature混用或沿用默认inventory。已有`image-projection-v1`样例仍保留原合同。完整SDK与产品验收分开记录，不把样例通过称为主应用已接通。
 
 语义profile无host import，因此Invocation.enabledFeatures只填需要import的已协商子集；参照validator `package::invocation_features`和公开feature catalog。完整包特性仍由宿主验证，旧宿主必须拒绝新包。成功data按media.id关联真实投影，原件MIME/文件名/几何以SDK broker为准；HTTP/stat/checkpoint先解码公开DTO，不用简化mock省略必填nullable字段。
 

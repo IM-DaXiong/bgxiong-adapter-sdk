@@ -25,6 +25,7 @@ impl std::error::Error for ContractError {}
 pub struct ValidatedOperationInput {
     pub(crate) video_speech: bool,
     pub(crate) image_projection: bool,
+    pub(crate) media_projection: bool,
     pub(crate) contract: Value,
     pub(crate) operation: Value,
     pub(crate) request: Value,

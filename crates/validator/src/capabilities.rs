@@ -78,6 +78,9 @@ impl CapabilityRegistry {
         for contract in contracts {
             validate_contract(contract)?;
             let c = serde_json::to_value(contract).unwrap();
+            if package.enabled_features().contains(crate::media_projection::FEATURE) {
+                crate::media_projection::validate_contract(&c)?;
+            }
             if package.enabled_features().contains(crate::image_projection::FEATURE) {
                 if !package.manifest()["requiredFeatures"].as_array().unwrap().iter().any(|f| f == crate::image_projection::FEATURE) {
                     return Err(ContractError::new("INVALID_PACKAGE", "/requiredFeatures", "image projection must be required, never optional"));
@@ -174,6 +177,7 @@ impl CapabilityRegistry {
             return Err(ContractError::new("INVALID_INPUT", "/payloadJson", "invocation payload differs from frozen input"));
         }
         let context = crate::image_projection::enable(validate_input(&entry.contract, request)?, &entry.enabled_features)?;
+        let context = crate::media_projection::enable(context, &entry.enabled_features)?;
         crate::video_speech::enable(context, &entry.enabled_features)
     }
 

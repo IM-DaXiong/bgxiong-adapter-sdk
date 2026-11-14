@@ -423,6 +423,7 @@ pub fn execute(args: &[String]) -> Result<Value> {
     if !checkpoint_result.is_null() {
         SchemaRegistry::validate_public("result", checkpoint_result).map_err(native)?;
         bgx_adapter_v2_validator::image_projection::validate_result(&snapshot.context, checkpoint_result).map_err(native)?;
+        bgx_adapter_v2_validator::media_projection::validate_result(&snapshot.context, checkpoint_result).map_err(native)?;
         bgx_adapter_v2_validator::result::validate_output_slots(
             &snapshot.context,
             checkpoint_result,

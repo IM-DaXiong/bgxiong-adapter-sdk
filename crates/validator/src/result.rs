@@ -64,6 +64,7 @@ pub fn validate_task_input(
     Ok(ValidatedOperationInput {
         video_speech: original.video_speech,
         image_projection: original.image_projection,
+        media_projection: original.media_projection,
         contract: original.contract.clone(),
         operation: original.operation.clone(),
         request: original.request.clone(),
@@ -255,6 +256,7 @@ pub fn validate_result(
 ) -> Result<(), ContractError> {
     let value = crate::input::as_value(result)?;
     crate::image_projection::validate_result(context, &value)?;
+    crate::media_projection::validate_result(context, &value)?;
     crate::video_speech::validate_result(context, &value)?;
     declared_result(
         &context.registry,

@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "bgx-adapter-v2-reference-host"
-version = "2.3.0"
+version = "2.4.0"
 dependencies = [
  "base64 0.22.1",
  "bgx-adapter-v2-media",
@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "bgx-adapter-v2-tools"
-version = "2.3.0"
+version = "2.4.0"
 dependencies = [
  "bgx-adapter-v2-ports",
  "bgx-adapter-v2-reference-host",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "bgx-adapter-v2-validator"
-version = "2.1.0"
+version = "2.4.0"
 dependencies = [
  "base64 0.22.1",
  "bgx-adapter-v2-sdk",

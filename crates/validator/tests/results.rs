@@ -60,20 +60,24 @@ fn speech_completion_binds_video_and_full_original_audio_receipt() {
 }
 
 fn projection_context() -> bgx_adapter_v2_validator::ValidatedOperationInput {
+    projection_context_for("image.generate", "image-projection-v1", "equirectangular360")
+}
+fn projection_context_for(capability: &str, profile: &str, projection: &str) -> bgx_adapter_v2_validator::ValidatedOperationInput {
     let fixture:Value=serde_json::from_str(include_str!("../../../examples/capabilities.json")).unwrap();
     let mut c=fixture["capabilities"][0].clone();
-    c["capabilityKey"]=json!("image.generate");
+    c["capabilityKey"]=json!(capability);
     c["operations"][0]["execution"]["mode"]=json!("asynchronous");
     c["operations"][0]["execution"]["streaming"]=json!(false);
-    c["operations"][0]["outputSlots"]=json!([{"role":"result","kind":"image","minCount":1,"maxCount":null}]);
+    c["operations"][0]["outputSlots"]=json!([{"role":"result","kind":if capability == "video.generate" {"video"} else {"image"},"minCount":1,"maxCount":null}]);
     let mut input_digest=String::new();
     for s in c["schemas"].as_array_mut().unwrap() {
         let mut schema:Value=serde_json::from_str(s["schemaJson"].as_str().unwrap()).unwrap();
         if s["id"]=="input" {
             schema["properties"]["outputProjection"]=json!({"type":"string","enum":["flat","equirectangular360"],"default":"flat"});
+            if profile == "media-projection-v1" {schema["properties"]["outputProjection"]["enum"].as_array_mut().unwrap().push(json!("equirectangular180"));}
             schema["required"].as_array_mut().unwrap().push(json!("outputProjection"));
         } else if s["id"]=="output" {
-            schema=json!({"$ref":"https://bgxiong.local/vendor-adapter/v2/profiles/image-projection-v1/output.schema.json"});
+            schema=json!({"$ref":format!("https://bgxiong.local/vendor-adapter/v2/profiles/{profile}/output.schema.json")});
         } else {continue;}
         let raw=schema.to_string();let digest=bgx_adapter_v2_validator::hash_bytes(raw.as_bytes());
         if s["id"]=="input" {input_digest=digest.clone();}
@@ -83,10 +87,50 @@ fn projection_context() -> bgx_adapter_v2_validator::ValidatedOperationInput {
         c["operations"][0][format!("{name}Schema")]["digest"]=c["schemas"].as_array().unwrap().iter().find(|s|s["id"]==name).unwrap()["digest"].clone();
     }
     let mut request=serde_json::from_str::<Value>(include_str!("../../../examples/payloads.json")).unwrap()["validSubmit"].clone();
-    request["capabilityKey"]=json!("image.generate");request["inputSchemaDigest"]=json!(input_digest);
-    request["input"]["outputProjection"]=json!("equirectangular360");
+    request["capabilityKey"]=json!(capability);request["inputSchemaDigest"]=json!(input_digest);
+    request["input"]["outputProjection"]=json!(projection);
     let context=validate_input(&serde_json::from_value(c).unwrap(),&serde_json::from_value(request).unwrap()).unwrap();
-    bgx_adapter_v2_validator::image_projection::enable(context,&std::collections::BTreeSet::from(["image-projection-v1".into()])).unwrap()
+    let features=std::collections::BTreeSet::from([profile.into()]);
+    let context=bgx_adapter_v2_validator::image_projection::enable(context,&features).unwrap();
+    bgx_adapter_v2_validator::media_projection::enable(context,&features).unwrap()
+}
+
+#[test]
+fn media_projection_binds_image_and_video_identity_geometry_and_recovery() {
+    use bgx_adapter_v2_validator::media_projection::validate_geometry;
+    for (capability, kind, mime) in [("image.generate","image","image/png"),("video.generate","video","video/mp4")] {
+        for projection in ["flat","equirectangular180","equirectangular360"] {
+            let context=projection_context_for(capability,"media-projection-v1",projection);
+            let mut good=completed(json!([{"kind":"media","role":"result","media":{"id":"a","kind":kind,"handle":"lease-a","mime":mime,"fileName":if kind=="image" {"a.png"} else {"a.mp4"},"byteLength":"72"}}]));
+            good["data"]=json!({"mediaArtifacts":[{"mediaId":"a","role":"result","kind":kind,"projection":projection}]});
+            validate_result(&context,&serde_json::from_value(good.clone()).unwrap()).unwrap();
+            for field in ["mediaId","role","kind","projection"] {
+                let mut bad=good.clone();bad["data"]["mediaArtifacts"][0][field]=json!("wrong");
+                assert!(validate_result(&context,&serde_json::from_value(bad).unwrap()).is_err(),"{kind}/{projection}/{field}");
+            }
+            let mut duplicated=good.clone();let entry=duplicated["data"]["mediaArtifacts"][0].clone();duplicated["data"]["mediaArtifacts"].as_array_mut().unwrap().push(entry);
+            assert!(validate_result(&context,&serde_json::from_value(duplicated).unwrap()).is_err());
+            let mut missing=good.clone();missing["data"]["mediaArtifacts"]=json!([]);
+            assert!(validate_result(&context,&serde_json::from_value(missing).unwrap()).is_err());
+            let width=if projection=="equirectangular360" {2048} else {1024};
+            validate_geometry(&context,kind,Some(width),Some(1024)).unwrap();
+            if projection!="flat" {
+                for (w,h) in [(None,None),(Some(0),Some(0)),(Some(width-1),Some(1024)),(Some(2),Some(u32::MAX))] {
+                    assert!(validate_geometry(&context,kind,w,h).is_err(),"{kind}/{projection}/{w:?}/{h:?}");
+                }
+            }
+            let task=json!({"schemaVersion":2,"modelId":"example-model","capabilityKey":capability,"operationId":"example/render","operationVersion":1,"vendorTaskId":"original-task","resumeToken":null,"configuration":{"endpointBaseUrl":"https://example.invalid"}});
+            let query=validate_task_input(&context,&serde_json::from_value(task).unwrap(),"query","original-task").unwrap();
+            let response=json!({"status":"succeeded","outputs":good["outputs"],"data":good["data"],"usage":null,"progress":null,"resumeToken":null,"terminalFailure":null});
+            validate_result(&query,&serde_json::from_value(response.clone()).unwrap()).unwrap();
+            let mut wrong=response.clone();wrong["data"]["mediaArtifacts"][0]["projection"]=json!(if projection=="flat" {"equirectangular360"} else {"flat"});
+            assert!(validate_result(&query,&serde_json::from_value(wrong).unwrap()).is_err());
+            let mut running=response;running["status"]=json!("running");
+            assert!(validate_result(&query,&serde_json::from_value(running.clone()).unwrap()).is_err());
+            running["outputs"]=json!([]);running["data"]["mediaArtifacts"]=json!([]);
+            validate_result(&query,&serde_json::from_value(running).unwrap()).unwrap();
+        }
+    }
 }
 
 #[test]
