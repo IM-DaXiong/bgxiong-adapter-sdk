@@ -24,6 +24,7 @@
     "prompt": {
       "type": "string",
       "minLength": 1,
+      "default": "Create a smooth transition between the supplied first and last frames, preserving the subjects and scene lighting.",
       "description": "User-confirmed full prompt text. Preserve newlines and any material-reference text; do not truncate or rewrite."
     },
     "negativePrompt": {

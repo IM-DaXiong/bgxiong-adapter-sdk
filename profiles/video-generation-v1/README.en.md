@@ -1,5 +1,11 @@
 # video-generation-v1: public bidirectional video-generation parameter contract
 
+Prompt defaults are entirely optional for both existing and new adapters. Absence does not change installation, presentation, validation or execution; it adds no required field, capability requirement or minimum runtime version.
+
+Optional workflow prompt defaults apply to both `image.generate` and `video.generate`: declare a nonempty string `default` on the operation's `inputSchema.properties.prompt` with `type: "string"`. The default must satisfy that field's schema. After selection and prompt/capability hydration, the host copies the exact default into an editable draft only when the live prompt is empty or whitespace. Existing text (including inbound text), late user edits and IME composition take precedence. Scope defaults to the operation/schema identity, never vendor names.
+
+Initialize once per selection, not on every render or capability refresh; clearing the draft must not immediately refill it. Switching operations or reopening may initialize again, still only if empty. Missing, blank or non-string defaults do nothing. Use normal prompt persistence/history/submission and the same MCP/F1 draft. The executor must not replace empty submitted prompts or treat defaults as user-confirmed input. This reuses JSON Schema annotations without changing WIT or the runtime version.
+
 This directory is the public consumption contract for `video.generate`: how adapters declare workbench parameters, and which standard fields are submitted after user confirmation. The protocol remains V2 / WIT 2.0.0. This directory does **not** add a runtime envelope, WIT fields, a combination interpreter, or an SDK execution version.
 
 Authoritative shapes:
