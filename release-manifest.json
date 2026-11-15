@@ -865,19 +865,19 @@
     {
       "source": "profiles/video-generation-v1/README.en.md",
       "target": "profiles/video-generation-v1/README.en.md",
-      "sha256": "06b0b0660c21167555ddb2258c42186b372706953f441ac223d633e5516a8f95",
+      "sha256": "f9a44fbfa7b006ab7a78f6bd8e091ba19897f542a8569f21eb2c29721a8dbafd",
       "required": true
     },
     {
       "source": "profiles/video-generation-v1/README.zh-CN.md",
       "target": "profiles/video-generation-v1/README.zh-CN.md",
-      "sha256": "b358eb60fdda2bbd02031650d014417838c3e3a8399a3dbbfc056bf4f40ae81d",
+      "sha256": "698f2abe07f8eda2aefba96400641baef3f1e2bdfe6afbfa8e7fa0a8eba059fd",
       "required": true
     },
     {
       "source": "profiles/video-generation-v1/input.example.schema.json",
       "target": "profiles/video-generation-v1/input.example.schema.json",
-      "sha256": "0eb0a4f0129286b5cd45bac4ba02248e2deadf2c07c59e50215e49c7108f1548",
+      "sha256": "494a458913eb8d48eb4460c59a49b1250b3adbc30bab2f854742048d50f724af",
       "required": true
     },
     {
