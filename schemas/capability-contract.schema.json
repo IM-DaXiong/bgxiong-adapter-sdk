@@ -262,6 +262,22 @@
           "inputProfile": {
             "const": "operation-input-v1",
             "description": "This operation requires operation-input-preflight-v2."
+          },
+          "promptProjection": {
+            "type": "object",
+            "description": "Optional opaque prompt profile. profileId is not interpreted by the SDK.",
+            "additionalProperties": false,
+            "required": ["profileId", "version"],
+            "properties": {
+              "profileId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
           }
         },
         "required": [

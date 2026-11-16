@@ -937,7 +937,7 @@
     {
       "source": "schemas/capability-contract.schema.json",
       "target": "schemas/capability-contract.schema.json",
-      "sha256": "23cdee65c5a8d0a98a359ccfd8ad735692351478a6ce193909c868a7e6242517",
+      "sha256": "d13213d188a67f1878930e363f7d1a854cbb064938eaa50129b68c0625e7996d",
       "required": true
     },
     {
@@ -1051,7 +1051,7 @@
     {
       "source": "sdk/rust/src/generated.rs",
       "target": "sdk/rust/src/generated.rs",
-      "sha256": "b7961455c8ac286da23e998dc96125248027de57b166255c0f0baae6e62892cc",
+      "sha256": "2ad0f4f20b4792d17ff4819b5a2bb80bbd81c2e51f76e137853da202420f344e",
       "required": true
     },
     {
@@ -1099,7 +1099,7 @@
     {
       "source": "sdk/typescript/src/generated.ts",
       "target": "sdk/typescript/src/generated.ts",
-      "sha256": "7bc9fe6d57f2e6fe1588248cce4458294ebf2a41c98bf60692f3d73be584590e",
+      "sha256": "1446cce08d877e5599b36ca40b2f4f8227708db41d0a1d32098b8faf7257ca33",
       "required": true
     },
     {
@@ -1171,7 +1171,7 @@
     {
       "source": "templates/rust/vendor-sdk/sdk/rust/src/generated.rs",
       "target": "templates/rust/vendor-sdk/sdk/rust/src/generated.rs",
-      "sha256": "b7961455c8ac286da23e998dc96125248027de57b166255c0f0baae6e62892cc",
+      "sha256": "2ad0f4f20b4792d17ff4819b5a2bb80bbd81c2e51f76e137853da202420f344e",
       "required": true
     },
     {
