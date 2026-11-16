@@ -1,7 +1,10 @@
 //! Public conformance evidence integrity plus actual offline transcript execution.
 //! Command/status fields are declarations, not proof that this process ran them.
 use crate::transcript::{self, TranscriptFile};
-use bgx_adapter_v2_ports::{resource_policy, wire::guest::valid_package_path};
+use bgx_adapter_v2_ports::{
+    resource_policy,
+    wire::{guest::valid_package_path, Response},
+};
 use bgx_adapter_v2_reference_host::{checkpoint::SnapshotPolicy, config::LoadedPackage};
 use bgx_adapter_v2_transport::Options;
 use serde::{Deserialize, Serialize};
@@ -141,6 +144,131 @@ fn measure(path: &Path) -> crate::Result<String> {
         hash.update(&buffer[..n]);
     }
     Ok(hex::encode(hash.finalize()))
+}
+
+struct ReplayedOperation {
+    request: Value,
+    result: Value,
+}
+
+impl ReplayedOperation {
+    fn from_transcript(tape: &TranscriptFile) -> Vec<Self> {
+        tape.transcript
+            .invocations
+            .iter()
+            .filter_map(|call| {
+                let Response::V0(response) = &call.response else {
+                    return None;
+                };
+                let request: Value = serde_json::from_str(&call.invocation.r#payload_json).ok()?;
+                if !bgx_adapter_v2_validator::operation_input::is_probe(&request)
+                    && request["preparation"].is_null()
+                {
+                    return None;
+                }
+                let result = serde_json::from_str(&response.r#data_json).ok()?;
+                Some(Self { request, result })
+            })
+            .collect()
+    }
+}
+
+fn operation_input_replayed(operations: &[&ReplayedOperation]) -> bool {
+    let preflights = operations.iter().copied().filter(|call| {
+        bgx_adapter_v2_validator::operation_input::is_probe(&call.request)
+            && bgx_adapter_v2_validator::operation_input::request_digest(&call.request)
+                .is_ok_and(|digest| call.request["requestDigest"] == digest)
+            && call.request["requestDigest"] == call.result["requestDigest"]
+    });
+    let rejected = preflights.clone().any(|call| {
+        call.result["status"] == "rejected"
+            && call.result["diagnostics"]
+                .as_array()
+                .is_some_and(|diagnostics| {
+                    diagnostics.iter().any(|diagnostic| {
+                        diagnostic["fieldPointer"]
+                            .as_str()
+                            .is_some_and(|pointer| pointer.starts_with('/'))
+                    })
+                })
+    });
+    rejected
+        && preflights
+            .filter(|call| call.result["status"] == "ready")
+            .any(|prepared| {
+                operations.iter().any(|submit| {
+                    let proof = &submit.request["preparation"];
+                    let selection = &prepared.request["selection"];
+                    proof["requestDigest"] == prepared.request["requestDigest"]
+                        && proof["material"] == prepared.result["material"]
+                        && proof["materialDigest"]
+                            == bgx_adapter_v2_validator::operation_input::digest(&proof["material"])
+                        && proof["environmentRevisionDigest"]
+                            == prepared.request["environment"]["revisionDigest"]
+                        && submit.request["input"] == prepared.request["input"]
+                        && submit.request["configuration"] == prepared.request["configuration"]
+                        && [
+                            "modelId",
+                            "capabilityKey",
+                            "operationId",
+                            "operationVersion",
+                            "inputSchemaDigest",
+                        ]
+                        .into_iter()
+                        .all(|field| selection[field] == submit.request[field])
+                        && matches!(
+                            submit.result["kind"].as_str(),
+                            Some("accepted" | "completed")
+                        )
+                })
+            })
+}
+
+struct ReplayedArtifact {
+    output: Value,
+    operations: Vec<ReplayedOperation>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bgx_adapter_v2_validator::operation_input;
+    use serde_json::json;
+
+    #[test]
+    fn operation_replay_requires_the_frozen_input_and_a_field_rejection() {
+        let selection = json!({"modelId":"fixture","capabilityKey":"image.generate",
+            "operationId":"fixture/image","operationVersion":1,"inputSchemaDigest":"schema"});
+        let prep = |input: Value, result: Value| {
+            let mut request = json!({"kind":"operation_input_preflight","selection":selection,
+                "input":input,"configuration":{},"environment":{"revisionDigest":"batch"},"mediaMetadata":[]});
+            request["requestDigest"] = json!(operation_input::request_digest(&request).unwrap());
+            let mut result = result;
+            result["requestDigest"] = request["requestDigest"].clone();
+            ReplayedOperation { request, result }
+        };
+        let prepared = prep(
+            json!({"size":"square"}),
+            json!({"status":"ready","material":{"pixels":512}}),
+        );
+        let rejected = prep(
+            json!({"size":"small"}),
+            json!({"status":"rejected","diagnostics":[{"fieldPointer":"/size"}]}),
+        );
+        let material = &prepared.result["material"];
+        let mut submit = ReplayedOperation {
+            request: selection.clone(),
+            result: json!({"kind":"completed"}),
+        };
+        submit.request["input"] = prepared.request["input"].clone();
+        submit.request["configuration"] = json!({});
+        submit.request["preparation"] = json!({"requestDigest":prepared.request["requestDigest"],
+            "material":material,"materialDigest":operation_input::digest(material),"environmentRevisionDigest":"batch"});
+        assert!(!operation_input_replayed(&[&prepared, &submit]));
+        assert!(operation_input_replayed(&[&prepared, &submit, &rejected]));
+        submit.request["input"]["size"] = json!("large");
+        assert!(!operation_input_replayed(&[&prepared, &submit, &rejected]));
+    }
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -321,7 +449,7 @@ pub async fn conform(
     let root = root(evidence_root)?;
     let mut report = evaluate(manifest, &root)?;
     report.scope = "MOCK_CONFORMANCE_WITH_DECLARED_EVIDENCE";
-    let mut replayed = BTreeMap::<String, std::result::Result<Value, String>>::new();
+    let mut replayed = BTreeMap::<String, std::result::Result<ReplayedArtifact, String>>::new();
     for case in &mut report.cases {
         if !case.passed {
             continue;
@@ -339,8 +467,11 @@ pub async fn conform(
                     let run =
                         transcript::replay(sdk, worker, package, &tape, options.clone(), policy)
                             .await?;
-                    serde_json::to_value(run)
-                        .map_err(|_| invalid("Cannot encode actual replay evidence"))
+                    Ok::<_, crate::Error>(ReplayedArtifact {
+                        output: serde_json::to_value(run)
+                            .map_err(|_| invalid("Cannot encode actual replay evidence"))?,
+                        operations: ReplayedOperation::from_transcript(&tape),
+                    })
                 }
                 .await
                 .map_err(|e| format!("{}: {}", e.code, e.message));
@@ -364,18 +495,44 @@ pub async fn conform(
                 case.failures.push("C28 requires actual execution of a matching transcript with no broker or network".into());
             }
         }
+        if case.id == "C37" {
+            let operations: Vec<_> = case
+                .artifacts
+                .iter()
+                .filter_map(|artifact| {
+                    if artifact.kind != ArtifactKind::Transcript || !artifact.matched {
+                        return None;
+                    }
+                    replayed.get(&artifact.path)?.as_ref().ok()
+                })
+                .flat_map(|artifact| &artifact.operations)
+                .collect();
+            if case.mode == Mode::Mock
+                && case.failures.is_empty()
+                && operation_input_replayed(&operations)
+            {
+                case.source = Source::ActuallyExecuted;
+            } else {
+                case.failures.push("C37 requires a replayed ready preparation and matching submit, plus a field-specific rejection".into());
+            }
+        }
         case.passed = case.failures.is_empty();
     }
     report.replays = replayed
         .into_iter()
         .filter_map(|(path, result)| {
             result.ok().map(
-                |run| serde_json::json!({"artifact":path,"source":"ACTUALLY_EXECUTED","run":run}),
+                |run| serde_json::json!({"artifact":path,"source":"ACTUALLY_EXECUTED","run":run.output}),
             )
         })
         .collect();
     report.conformant = report.integrity_complete
         && report.cases.iter().filter(|r| r.required).all(|r| r.passed)
+        && report
+            .cases
+            .iter()
+            .filter(|r| r.id == "C37" && r.declared_status != Status::NotRun)
+            .all(|r| r.passed)
         && report
             .cases
             .iter()

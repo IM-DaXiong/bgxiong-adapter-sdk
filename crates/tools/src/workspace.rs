@@ -23,6 +23,8 @@ use zeroize::Zeroizing;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
+    pub imported_query: Option<bgx_adapter_v2_reference_host::imported_query::ImportedQuery>,
+    #[serde(default)]
     pub managed_recovery_route: Option<bgx_adapter_v2_reference_host::managed_route::ManagedRecoveryRoute>,
     pub binding_id: String,
     pub binding_revision: u64,
@@ -345,7 +347,7 @@ pub fn open(path: &Path, create: bool) -> crate::Result<DevelopmentWorkspace> {
     Ok(workspace)
 }
 /// Receipts and diagnostics remain in the explicitly marked development workspace.
-fn contained_file(workspace: &DevelopmentWorkspace, path: &Path) -> crate::Result<()> {
+fn contained_file(workspace: &DevelopmentWorkspace, path: &Path) -> crate::Result<PathBuf> {
     absolute(path, "output")?;
     plain_path(path)?;
     let parent = path
@@ -371,7 +373,7 @@ fn contained_file(workspace: &DevelopmentWorkspace, path: &Path) -> crate::Resul
             ));
         }
     }
-    Ok(())
+    Ok(parent.join(path.file_name().expect("validated output file name")))
 }
 pub fn contained_output(workspace: &DevelopmentWorkspace, path: &Path) -> crate::Result<()> {
     let receipts = workspace.root().join("receipts");
@@ -397,12 +399,8 @@ pub fn contained_output(workspace: &DevelopmentWorkspace, path: &Path) -> crate:
             "Receipt directory escapes the development workspace",
         ));
     }
-    contained_file(workspace, path)?;
-    let parent = path
-        .parent()
-        .unwrap()
-        .canonicalize()
-        .map_err(|_| invalid("output", "Output directory is unavailable"))?;
+    let target = contained_file(workspace, path)?;
+    let parent = target.parent().expect("validated output directory");
     if !parent.starts_with(&receipts) || path.extension().and_then(|v| v.to_str()) != Some("json") {
         return Err(invalid(
             "output",
@@ -416,8 +414,8 @@ pub fn atomic_json(
     path: &Path,
     value: &Value,
 ) -> crate::Result<()> {
-    contained_file(workspace, path)?;
-    let mut staged = tempfile::NamedTempFile::new_in(path.parent().unwrap())
+    let target = contained_file(workspace, path)?;
+    let mut staged = tempfile::NamedTempFile::new_in(target.parent().expect("validated output directory"))
         .map_err(|_| invalid("output", "Cannot stage the development receipt"))?;
     serde_json::to_writer(staged.as_file_mut(), value)
         .map_err(|_| invalid("output", "Cannot encode the development receipt"))?;
@@ -426,7 +424,25 @@ pub fn atomic_json(
         .and_then(|_| staged.as_file().sync_all())
         .map_err(|_| invalid("output", "Cannot synchronize the development receipt"))?;
     staged
-        .persist(path)
+        .persist(target)
         .map_err(|_| invalid("output", "Cannot atomically commit the development receipt"))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn commits_receipt_to_long_unprefixed_workspace_path() {
+        let fixture = tempfile::tempdir().unwrap();
+        let root = fixture.path().join("workspace".repeat(9)).join("session".repeat(10));
+        fs::create_dir_all(&root).unwrap();
+        let workspace = DevelopmentWorkspace::create(&root).unwrap();
+        let target = root.join("receipts").join(format!("{}.json", "original-query-".repeat(8)));
+        assert!(target.as_os_str().len() >= 260);
+        contained_output(&workspace, &target).unwrap();
+        atomic_json(&workspace, &target, &serde_json::json!({"query":true})).unwrap();
+        assert_eq!(fs::read_to_string(target).unwrap(), "{\"query\":true}\n");
+    }
 }

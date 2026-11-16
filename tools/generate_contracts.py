@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = "https://bgxiong.local/vendor-adapter/v2/"
 NAMES = {
     "video-speech.input": "VideoSpeechInputV1", "video-speech.output": "VideoSpeechOutputV1",
-    "operation-preflight": "OperationPreflightV1",
+    "operation-preflight": "OperationPreflightV1", "operation-input": "OperationInputV1",
     "invocation": "Invocation", "response": "Response",
     "capability-contract": "CapabilityContractV2", "media-input": "MediaInputV2",
     "operation-payload": "OperationPayloadV2", "result": "OperationResultV2",

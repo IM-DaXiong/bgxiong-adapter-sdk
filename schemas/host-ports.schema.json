@@ -923,6 +923,15 @@
         {
           "type": "object",
           "properties": {
+            "version": {"const": 1},
+            "kind": {"const": "credential-utc-seconds"}
+          },
+          "required": ["version", "kind"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "version": {
               "const": 1
             },
@@ -959,6 +968,23 @@
             "claimsJson": {
               "type": "string",
               "minLength": 2
+            },
+            "hostTime": {
+              "type": "object",
+              "properties": {
+                "lifetimeSeconds": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4294967295
+                },
+                "notBeforeLeewaySeconds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                }
+              },
+              "required": ["lifetimeSeconds", "notBeforeLeewaySeconds"],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -983,6 +1009,20 @@
             "date": {
               "type": "string",
               "minLength": 1
+            },
+            "derivation": {
+              "type": "object",
+              "properties": {
+                "messages": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {"type": "string", "minLength": 1, "maxLength": 256}
+                },
+                "authorizationTemplate": {"type": "string", "minLength": 1, "maxLength": 768}
+              },
+              "required": ["messages", "authorizationTemplate"],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -994,6 +1034,244 @@
           "additionalProperties": false
         }
       ]
+    },
+    "websocketPlan": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "maxMessageBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/header"
+          }
+        },
+        "generatedHeaders": {
+          "type": "array",
+          "items": {
+            "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/generatedHeader"
+          }
+        }
+      },
+      "required": [
+        "url",
+        "timeoutMs",
+        "maxMessageBytes",
+        "headers",
+        "generatedHeaders"
+      ],
+      "additionalProperties": false
+    },
+    "host_websocket_openArgs": {
+      "type": "object",
+      "properties": {
+        "plan": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/websocketPlan"
+        },
+        "credential": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "plan",
+        "credential"
+      ],
+      "additionalProperties": false
+    },
+    "host_websocket_openResult": {
+      "type": "object",
+      "properties": {
+        "socketId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "socketId"
+      ],
+      "additionalProperties": false
+    },
+    "host_websocket_readArgs": {
+      "type": "object",
+      "properties": {
+        "socketId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      },
+      "required": [
+        "socketId",
+        "timeoutMs"
+      ],
+      "additionalProperties": false
+    },
+    "host_websocket_readResult": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 1048576
+            }
+          },
+          "required": [
+            "kind",
+            "text"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "binary"
+            },
+            "bytes": {
+              "type": "array",
+              "maxItems": 1048576,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "bytes"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "idle"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "closed"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "host_websocket_writeArgs": {
+      "type": "object",
+      "properties": {
+        "socketId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "text"
+                },
+                "text": {
+                  "type": "string",
+                  "maxLength": 1048576
+                }
+              },
+              "required": [
+                "kind",
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "binary"
+                },
+                "bytes": {
+                  "type": "array",
+                  "maxItems": 1048576,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "bytes"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "socketId",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "host_websocket_writeResult": {
+      "type": "null"
+    },
+    "host_websocket_closeArgs": {
+      "type": "object",
+      "properties": {
+        "socketId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "socketId"
+      ],
+      "additionalProperties": false
+    },
+    "host_websocket_closeResult": {
+      "type": "null"
     }
   },
   "x-wit-functions": [
@@ -1175,6 +1453,46 @@
       },
       "returns": {
         "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_checkpoint_writeResult"
+      }
+    },
+    {
+      "interface": "host-websocket",
+      "name": "open",
+      "arguments": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_openArgs"
+      },
+      "returns": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_openResult"
+      }
+    },
+    {
+      "interface": "host-websocket",
+      "name": "read",
+      "arguments": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_readArgs"
+      },
+      "returns": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_readResult"
+      }
+    },
+    {
+      "interface": "host-websocket",
+      "name": "write",
+      "arguments": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_writeArgs"
+      },
+      "returns": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_writeResult"
+      }
+    },
+    {
+      "interface": "host-websocket",
+      "name": "close",
+      "arguments": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_closeArgs"
+      },
+      "returns": {
+        "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_closeResult"
       }
     }
   ],
@@ -1459,6 +1777,70 @@
         },
         "args": {
           "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_checkpoint_writeArgs"
+        }
+      },
+      "required": [
+        "method",
+        "args"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "host-websocket.open"
+        },
+        "args": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_openArgs"
+        }
+      },
+      "required": [
+        "method",
+        "args"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "host-websocket.read"
+        },
+        "args": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_readArgs"
+        }
+      },
+      "required": [
+        "method",
+        "args"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "host-websocket.write"
+        },
+        "args": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_writeArgs"
+        }
+      },
+      "required": [
+        "method",
+        "args"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "host-websocket.close"
+        },
+        "args": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/host-ports.schema.json#/$defs/host_websocket_closeArgs"
         }
       },
       "required": [

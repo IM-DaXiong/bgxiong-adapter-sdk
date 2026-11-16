@@ -181,6 +181,11 @@
       "id": "C36",
       "title": "隔离作者新增操作参数",
       "required": true
+    },
+    {
+      "id": "C37",
+      "title": "操作预检与冻结提交实际回放",
+      "required": false
     }
   ]
 }

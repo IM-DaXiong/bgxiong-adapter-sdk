@@ -1,4 +1,14 @@
 
 ## Operation preflight source implementation (unreleased)
 
+New image and video operations use [Operation Input v1](profiles/operation-input-v1/README.en.md). The package declares the full input, runs the metadata-only preparation, and maps the frozen values into platform requests. The current application release uses the existing operation contracts until its coordinated upgrade.
+
+Authors can declare conformance case `C37` with transcripts from the same package. Record a ready preparation, a submit that consumes it, and a rejection with a field pointer. `conform` replays the transcripts and checks the operation identity, input, configuration, environment revision, and preparation digest before it marks this case `ACTUALLY_EXECUTED`.
+
+Declare `websocket-v1` when an operation needs `host-websocket`. Open uses the authorized HTTP origin corresponding to its `ws` or `wss` URL. The handles belong to the current invocation. Read and write carry text or binary messages, and a finite read wait can return `idle` while the connection stays open. Close the handle when finished. Metadata-only preparation cannot open it.
+
+When `jwt-host-time-v1` is negotiated, a `jwt-hs256` signing specification can include `hostTime` with `lifetimeSeconds` and `notBeforeLeewaySeconds`. Omit `iss`, `nbf`, and `exp` from `claimsJson`. The host fills them using the authorized credential's public ID and UTC clock. Send the resulting authorization only to the origin granted to that credential.
+
+With `derived-hmac-credential-v1` and an `hmac-sha256-credential` grant, call `credential-utc-seconds` for the current Unix time as a decimal string. Format the request date and canonical bytes as the platform requires. The `hmac-sha256-credential` signing specification accepts a `derivation` object containing the ordered `messages` and `authorizationTemplate`. The template accepts `{publicId}`, `{date}`, and the required `{hexHmacOfCanonical}`. Only the signed authorization leaves the host, and the HTTP broker accepts it only at the credential's authorized origin.
+
 The isolated video-speech work adds a metadata-only `probe` kind, `operation_preflight`. Require `operation-preflight-v1` and, for driving-audio video, `video-speech-v1`. Select a discovered operation using the same model/operation/schema identity as submit, provide its schema-valid input and frozen configuration, and provide media summaries only. The runtime permits diagnostic logging only; unknown service/model readiness must be blocked. No uploads, generation or checkpoint writes are authorized. See [video-speech profile](profiles/video-speech-v1/README.en.md). This source increment is uncompiled and untested; generated types and public SDK release are pending.

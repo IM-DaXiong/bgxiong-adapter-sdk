@@ -84,6 +84,9 @@ fn required_controls(
             continue;
         }
         let field = registry.input_field_schema(id, &pointer)?;
+        if field.get("const").is_some() {
+            continue;
+        }
         if accepts_type(&field, "object") && field.get("properties").is_some() {
             required_controls(registry, id, &field, &pointer, pointers)?;
         } else {
@@ -129,6 +132,9 @@ pub fn validate_contract(contract: &CapabilityContractV2) -> Result<(), Contract
         }
         // best-effort / sync+resumable allowed for third-party packages; durable resume still requires async + resumeSchema above
         validate_standard_profile(op)?;
+        if crate::operation_input::uses_profile(op) {
+            validate_controls(&r, op)?;
+        }
     }
     Ok(())
 }
@@ -169,6 +175,11 @@ pub fn validate_input(
             "/inputSchemaDigest",
             "input schema changed",
         ));
+    }
+    if crate::operation_input::uses_profile(&op) {
+        crate::operation_input::validate_value_budget(&input["input"], "/input")?;
+    } else if input.get("preparation").is_some() || input.get("environmentRevisionDigest").is_some() {
+        return Err(ContractError::new("INVALID_INPUT", "/preparation", "selected operation does not declare the operation input profile"));
     }
     r.validate(op["inputSchema"]["id"].as_str().unwrap(), &input["input"])?;
     r.validate(
@@ -214,10 +225,13 @@ fn validate_controls(r: &SchemaRegistry, op: &Value) -> Result<(), ContractError
                 "text" | "multiline" => accepts_type(&field, "string"),
                 "number" => accepts_type(&field, "number") || accepts_type(&field, "integer"),
                 "integer" => accepts_type(&field, "integer"),
-                "toggle" => accepts_type(&field, "boolean"),
+                "toggle" | "checkbox" => accepts_type(&field, "boolean"),
                 "select" => field.get("enum").is_some_and(Value::is_array),
-                "repeat" => accepts_type(&field, "array") && field.get("items").is_some(),
-                "media" => accepts_type(&field, "object") || accepts_type(&field, "array"),
+                "object" => accepts_type(&field, "object"),
+                "repeat" => accepts_type(&field, "array")
+                    && (field.get("items").is_some() || field.get("prefixItems").is_some()),
+                "media" => op["mediaSlots"].as_array().unwrap().iter()
+                    .any(|slot| slot["inputPointer"] == pointer),
                 "time_span" | "point" | "box" | "mask" => accepts_type(&field, "object"),
                 _ => false,
             };
@@ -229,8 +243,13 @@ fn validate_controls(r: &SchemaRegistry, op: &Value) -> Result<(), ContractError
                 ));
             }
         }
+        for slot in op["mediaSlots"].as_array().unwrap() {
+            let pointer = slot["inputPointer"].as_str().unwrap();
+            r.input_field_schema(op["inputSchema"]["id"].as_str().unwrap(), pointer)?;
+            pointers.insert(pointer.to_owned());
+        }
         required_controls(
-            &r,
+            r,
             op["inputSchema"]["id"].as_str().unwrap(),
             schema,
             "",

@@ -3,6 +3,38 @@ use bgx_adapter_v2_sdk::{Invocation, OperationResultV2, OperationTaskRefV2, Resp
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Validate observation of a verified retained request without reconstructing
+/// leases for old input files. Only the new query's result leases are granted.
+pub fn validate_retained_query(
+    contract: &bgx_adapter_v2_sdk::CapabilityContractV2,
+    frozen_request: &Value,
+    task: &OperationTaskRefV2,
+    vendor_task_id: &str,
+    features: &BTreeSet<String>,
+) -> Result<ValidatedOperationInput, ContractError> {
+    crate::validate_contract(contract)?;
+    let contract = crate::input::as_value(contract)?;
+    let operation = contract["operations"].as_array().into_iter().flatten()
+        .find(|op| op["id"] == frozen_request["operationId"] && op["version"] == frozen_request["operationVersion"])
+        .cloned().ok_or_else(|| ContractError::new("INVALID_INPUT", "/operationId", "retained operation is missing"))?;
+    let registry = crate::input::registry(&contract)?;
+    let original = ValidatedOperationInput {
+        video_speech: false,
+        image_projection: false,
+        media_projection: false,
+        contract_digest: crate::hash_bytes(&serde_json::to_vec(&contract).expect("JSON contract")),
+        contract,
+        operation,
+        request: frozen_request.clone(),
+        registry,
+        transport_operation: "submit".into(),
+    };
+    let original = crate::image_projection::enable(original, features)?;
+    let original = crate::media_projection::enable(original, features)?;
+    let original = crate::video_speech::enable(original, features)?;
+    validate_task_input(&original, task, "query", vendor_task_id)
+}
+
 pub fn validate_task_input(
     original: &ValidatedOperationInput,
     task: &OperationTaskRefV2,
@@ -342,6 +374,9 @@ pub fn validate_response(
             serde_json::from_str(i["payloadJson"].as_str().unwrap()).map_err(|_| {
                 ContractError::new("INVALID_INPUT", "/payloadJson", "invalid probe payload")
             })?;
+        if crate::operation_input::is_probe(&request) {
+            return crate::operation_input::validate_result(&request, &data);
+        }
         if request["kind"] == "operation_preflight" {
             return crate::operation_preflight::validate_result(&request, &data);
         }
@@ -351,7 +386,7 @@ pub fn validate_response(
         if crate::submission_resolution::is_kind(&data) {
             return Err(ContractError::new("INVALID_INPUT", "/kind", "Unrequested submission resolution"));
         }
-        if data["kind"] == "operation_preflight" {
+        if crate::operation_input::metadata_only_probe(&data) {
             return Err(ContractError::new("INVALID_INPUT", "/kind", "legacy probe cannot return operation preflight"));
         }
         if request["kind"] == "package_validation"

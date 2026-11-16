@@ -1,0 +1,114 @@
+{
+  "draft": {
+    "schemaVersion": 1,
+    "selection": {
+      "capabilityId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": {
+        "pluginId": "local.example.generic",
+        "version": "1.0.0",
+        "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "bindingId": "local-example",
+      "bindingRevision": 4,
+      "configurationDigest": "2f7af6a71fc98d38cd13c934d3d481c187c810e4251c99f5f1330bc8689b783e",
+      "modelId": "model-example",
+      "capabilityKey": "video.generate",
+      "operationId": "local.example.generic/generate",
+      "operationVersion": 1,
+      "inputSchemaDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "contractDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    "input": {
+      "instruction": "人物缓慢转身",
+      "outputMode": "workflow_native",
+      "motion": {
+        "strength": 0.35,
+        "duration": 4.5,
+        "keepAudio": false
+      },
+      "seed": "18446744073709551615",
+      "options": [
+        {
+          "name": "preserve_audio",
+          "enabled": false
+        }
+      ],
+      "optionalStyle": null,
+      "empty": [],
+      "zero": 0,
+      "clear": ""
+    },
+    "mediaBindings": [],
+    "draftRevision": 1
+  },
+  "request": {
+    "schemaVersion": 2,
+    "kind": "operation_input_preflight",
+    "selection": {
+      "capabilityId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "package": {
+        "pluginId": "local.example.generic",
+        "version": "1.0.0",
+        "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "bindingId": "local-example",
+      "bindingRevision": 4,
+      "configurationDigest": "2f7af6a71fc98d38cd13c934d3d481c187c810e4251c99f5f1330bc8689b783e",
+      "modelId": "model-example",
+      "capabilityKey": "video.generate",
+      "operationId": "local.example.generic/generate",
+      "operationVersion": 1,
+      "inputSchemaDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "contractDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    "configuration": {
+      "endpoint": "https://example.org"
+    },
+    "environment": {
+      "revisionDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "ready": true
+    },
+    "input": {
+      "instruction": "人物缓慢转身",
+      "outputMode": "workflow_native",
+      "motion": {
+        "strength": 0.35,
+        "duration": 4.5,
+        "keepAudio": false
+      },
+      "seed": "18446744073709551615",
+      "options": [
+        {
+          "name": "preserve_audio",
+          "enabled": false
+        }
+      ],
+      "optionalStyle": null,
+      "empty": [],
+      "zero": 0,
+      "clear": ""
+    },
+    "mediaMetadata": [],
+    "requestDigest": "d4ca6e387ef01500ce9f6501b194cac130fbd7c0f4c654e38f52823e9d530fbf"
+  },
+  "ready": {
+    "kind": "operation_input_preflight",
+    "status": "ready",
+    "requestDigest": "d4ca6e387ef01500ce9f6501b194cac130fbd7c0f4c654e38f52823e9d530fbf",
+    "material": {
+      "effectiveSeed": "18446744073709551615"
+    }
+  },
+  "rejected": {
+    "kind": "operation_input_preflight",
+    "status": "rejected",
+    "requestDigest": "d4ca6e387ef01500ce9f6501b194cac130fbd7c0f4c654e38f52823e9d530fbf",
+    "diagnostics": [
+      {
+        "code": "local.example.generic/motion-limit",
+        "message": "Motion exceeds the selected mode limit",
+        "fieldPointer": "/motion/duration"
+      }
+    ]
+  }
+}

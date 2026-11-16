@@ -9,11 +9,11 @@ use bgx_adapter_v2_ports::resource_policy;
 use bgx_adapter_v2_validator::SchemaRegistry;
 use hmac::{Hmac, Mac};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use serde_json::Value;
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use uuid::Uuid;
 use zeroize::Zeroizing;
@@ -219,18 +219,18 @@ impl CredentialVault {
             })?;
         let entry = self.entry(policy, handle)?;
         let kind = spec["kind"].as_str().unwrap();
-        if !entry.modes.contains(kind) {
+        let mode = if kind == "credential-utc-seconds" { "hmac-sha256-credential" } else { kind };
+        if !entry.modes.contains(mode) {
             return Err(error(
                 "PERMISSION_DENIED",
                 "Credential does not grant this signing primitive",
             ));
         }
-        let hmac = |bytes: &[u8]| -> Result<Vec<u8>> {
-            let mut mac = Hmac::<Sha256>::new_from_slice(&entry.secret.bytes)
-                .map_err(|_| error("INVALID_INPUT", "Credential signing key is invalid"))?;
-            mac.update(bytes);
-            Ok(mac.finalize().into_bytes().to_vec())
-        };
+        if kind == "credential-utc-seconds" {
+            require_derived_hmac(policy)?;
+            return Ok(host_utc_seconds()?.to_string());
+        }
+        let hmac = |bytes: &[u8]| compute_hmac(&entry.secret.bytes, bytes);
         let value = match kind {
             "hmac-sha256" => {
                 let digest = hmac(spec["message"].as_str().unwrap().as_bytes())?;
@@ -241,12 +241,7 @@ impl CredentialVault {
                 }
             }
             "jwt-hs256" => {
-                let claims = spec["claimsJson"].as_str().unwrap();
-                let parsed: Value = serde_json::from_str(claims)
-                    .map_err(|_| error("INVALID_INPUT", "JWT claims are not JSON"))?;
-                if !parsed.is_object() {
-                    return Err(error("INVALID_INPUT", "JWT claims must be a JSON object"));
-                }
+                let claims = jwt_claims(&spec, entry, policy)?;
                 let header =
                     serde_json::to_vec(&policy::protocol()["security"]["jwtHs256Header"]).unwrap();
                 let signing = format!(
@@ -267,17 +262,15 @@ impl CredentialVault {
                         "Credential presentation requires its explicit public ID",
                     )
                 })?;
-                let signature = hex::encode(hmac(spec["canonical"].as_str().unwrap().as_bytes())?);
+                let (template, signature) = credential_hmac(&spec, entry, policy)?;
                 render_presentation(
-                    policy::protocol()["security"]["hmacCredentialPresentation"]
-                        .as_str()
-                        .unwrap(),
+                    template,
                     &[
                         ("publicId", public_id),
                         ("date", spec["date"].as_str().unwrap()),
                         ("hexHmacOfCanonical", &signature),
                     ],
-                )?
+                ).map_err(|_| error("INVALID_INPUT", "Credential authorization template is invalid"))?
             }
             _ => return Err(error("PERMISSION_DENIED", "Unsupported signing primitive")),
         };
@@ -439,6 +432,77 @@ impl CredentialVault {
         output
     }
 }
+
+fn compute_hmac(key: &[u8], message: &[u8]) -> Result<Vec<u8>> {
+    let mut mac = Hmac::<Sha256>::new_from_slice(key)
+        .map_err(|_| error("INVALID_INPUT", "Credential signing key is invalid"))?;
+    mac.update(message);
+    Ok(mac.finalize().into_bytes().to_vec())
+}
+
+fn require_derived_hmac(policy: &NetworkPolicy) -> Result<()> {
+    if !policy.permits_derived_hmac_credential() {
+        return Err(error("PERMISSION_DENIED", "Derived HMAC credential feature was not negotiated"));
+    }
+    Ok(())
+}
+
+fn credential_hmac<'a>(spec: &'a Value, entry: &Entry, policy: &NetworkPolicy) -> Result<(&'a str, String)> {
+    let canonical = spec["canonical"].as_str().expect("validated canonical request").as_bytes();
+    let Some(derivation) = spec.get("derivation") else {
+        let template = policy::protocol()["security"]["hmacCredentialPresentation"]
+            .as_str().expect("public default credential presentation");
+        return Ok((template, hex::encode(compute_hmac(&entry.secret.bytes, canonical)?)));
+    };
+    require_derived_hmac(policy)?;
+    let template = derivation["authorizationTemplate"].as_str().expect("validated template");
+    if !template.contains("{hexHmacOfCanonical}") {
+        return Err(error("INVALID_INPUT", "Credential authorization must include the signature"));
+    }
+    let mut messages = derivation["messages"].as_array().expect("validated derivation").iter()
+        .map(|message| message.as_str().expect("validated derivation message").as_bytes());
+    let first = messages.next().expect("nonempty derivation");
+    let mut key = Zeroizing::new(compute_hmac(&entry.secret.bytes, first)?);
+    for message in messages {
+        key = Zeroizing::new(compute_hmac(&key, message)?);
+    }
+    Ok((template, hex::encode(compute_hmac(&key, canonical)?)))
+}
+
+fn host_utc_seconds() -> Result<u64> {
+    SystemTime::now().duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .map_err(|_| error("RESOURCE_UNAVAILABLE", "UTC clock is outside the supported range"))
+}
+
+fn jwt_claims(spec: &Value, entry: &Entry, policy: &NetworkPolicy) -> Result<String> {
+    let original = spec["claimsJson"].as_str().expect("validated JWT signing specification");
+    let mut claims: Value = serde_json::from_str(original)
+        .map_err(|_| error("INVALID_INPUT", "JWT claims are not JSON"))?;
+    let claims = claims.as_object_mut()
+        .ok_or_else(|| error("INVALID_INPUT", "JWT claims must be a JSON object"))?;
+    let Some(timing) = spec.get("hostTime") else {
+        return Ok(original.to_owned());
+    };
+    if !policy.permits_jwt_host_time() {
+        return Err(error("PERMISSION_DENIED", "Host-timed JWT feature was not negotiated"));
+    }
+    if ["iss", "nbf", "exp"].iter().any(|claim| claims.contains_key(*claim)) {
+        return Err(error("INVALID_INPUT", "Host-timed JWT claims must come from the credential host"));
+    }
+    let issuer = entry.secret.public_id.as_deref().filter(|issuer| !issuer.is_empty())
+        .ok_or_else(|| error("INVALID_INPUT", "Host-timed JWT requires a public credential identity"))?;
+    let now = host_utc_seconds()?;
+    let lifetime = timing["lifetimeSeconds"].as_u64().expect("validated lifetime");
+    let leeway = timing["notBeforeLeewaySeconds"].as_u64().expect("validated leeway");
+    let expiration = now.checked_add(lifetime)
+        .ok_or_else(|| error("INVALID_INPUT", "JWT expiration exceeds the time range"))?;
+    claims.insert("iss".to_owned(), json!(issuer));
+    claims.insert("nbf".to_owned(), json!(now.saturating_sub(leeway)));
+    claims.insert("exp".to_owned(), json!(expiration));
+    Ok(serde_json::to_string(claims).expect("serializable JWT claims"))
+}
+
 fn render_presentation(template: &str, fields: &[(&str, &str)]) -> Result<String> {
     // Scan the authored template once. Substituted public IDs/dates are data and
     // must never be rescanned as template instructions.

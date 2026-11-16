@@ -3,12 +3,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 use serde_json::Value;
 
-/// ABI features enable guest imports. Semantic profiles without imports remain
-/// negotiated by the verified package and host, outside the unchanged WIT enum.
+/// Closed ABI flags enable imports gated by Invocation. Features checked by the
+/// host against the verified package do not need a new case in that enum.
 pub fn invocation_features(negotiated: &BTreeSet<String>) -> BTreeSet<String> {
     let catalog: Value = serde_json::from_str(include_str!("../../../protocol/host-feature-catalog.json")).expect("published features");
     catalog["features"].as_array().unwrap().iter()
-        .filter(|f| !f["requiredImports"].as_array().unwrap().is_empty())
+        .filter(|f| f["invocationFeature"] != false && !f["requiredImports"].as_array().unwrap().is_empty())
         .filter_map(|f| f["id"].as_str())
         .filter(|id| negotiated.contains(*id))
         .map(str::to_owned).collect()

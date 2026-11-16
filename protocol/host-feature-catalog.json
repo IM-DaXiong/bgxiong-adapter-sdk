@@ -53,6 +53,31 @@
       "id": "submission-resolution-v1",
       "requiredImports": [],
       "semantics": "Before submit freeze durable service scope; reconcile the original request with CAS, accepted query reference or atomic late-submit-fencing tombstone; never resubmit unknown work"
+    },
+    {
+      "id": "operation-input-preflight-v2",
+      "requiredImports": [],
+      "semantics": "Metadata-only preflight bound to the selected package, operation, configuration, environment and unmodified JSON input. The package supplies diagnostics and opaque preparation material."
+    },
+    {
+      "id": "websocket-v1",
+      "requiredImports": [
+        "host-websocket"
+      ],
+      "invocationFeature": false,
+      "semantics": "Scoped WebSocket connections with policy-checked endpoints and credential presentation, bounded text and binary messages, and cancellation on invocation exit."
+    },
+    {
+      "id": "jwt-host-time-v1",
+      "requiredImports": ["host-credential"],
+      "invocationFeature": false,
+      "semantics": "Compute JWT issuer, not-before and expiration from the bound public credential identity and host UTC. The signature remains scoped to the request and authorized origin."
+    },
+    {
+      "id": "derived-hmac-credential-v1",
+      "requiredImports": ["host-credential"],
+      "invocationFeature": false,
+      "semantics": "Read host UTC seconds and sign a canonical request with a derived HMAC-SHA256 key. The package specifies the derivation messages and authorization presentation. Intermediate keys stay in the credential host."
     }
   ],
   "baseImports": [

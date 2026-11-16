@@ -68,6 +68,12 @@
             ],
             "additionalProperties": false
           }
+        },
+        "preparation": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/operation-input.schema.json#/$defs/preparation"
+        },
+        "environmentRevisionDigest": {
+          "$ref": "https://bgxiong.local/vendor-adapter/v2/operation-input.schema.json#/$defs/digest"
         }
       },
       "required": [

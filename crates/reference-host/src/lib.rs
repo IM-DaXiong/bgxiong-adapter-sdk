@@ -8,6 +8,8 @@ pub mod dispatch;
 pub mod events;
 pub mod http;
 pub mod http_stream;
+mod websocket;
+pub mod imported_query;
 pub mod media;
 pub mod managed_route;
 pub mod policy;

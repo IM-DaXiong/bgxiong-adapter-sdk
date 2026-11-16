@@ -1,4 +1,5 @@
 //! Platform-neutral native validation. No filesystem, network or application state.
+mod canonical;
 pub mod context;
 mod input;
 pub mod schema_registry;
@@ -14,6 +15,7 @@ pub mod media_projection;
 pub mod media_target_selection;
 pub mod video_target_keyframes;
 pub mod operation_preflight;
+pub mod operation_input;
 pub mod submission_resolution;
 pub mod video_speech;
 

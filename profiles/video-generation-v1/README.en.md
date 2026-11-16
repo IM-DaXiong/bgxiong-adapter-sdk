@@ -1,5 +1,7 @@
 # video-generation-v1: public bidirectional video-generation parameter contract
 
+This profile documents the field layout of deployed packages. New operations use [Operation Input v1](../operation-input-v1/README.en.md), where the package owns field names, validation and preparation.
+
 Prompt defaults are entirely optional for both existing and new adapters. Absence does not change installation, presentation, validation or execution; it adds no required field, capability requirement or minimum runtime version.
 
 Optional workflow prompt defaults apply to both `image.generate` and `video.generate`: declare a nonempty string `default` on the operation's `inputSchema.properties.prompt` with `type: "string"`. The default must satisfy that field's schema. After selection and prompt/capability hydration, the host copies the exact default into an editable draft only when the live prompt is empty or whitespace. Existing text (including inbound text), late user edits and IME composition take precedence. Scope defaults to the operation/schema identity, never vendor names.

@@ -24,7 +24,8 @@
               "time_span",
               "point",
               "box",
-              "mask"
+              "mask",
+              "object"
             ]
           },
           "label": {
@@ -36,6 +37,11 @@
           },
           "group": {
             "type": "string"
+          },
+          "displayRole": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional presentation role for this field. It does not change the input schema or its value."
           }
         },
         "required": [

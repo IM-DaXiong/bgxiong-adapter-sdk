@@ -1,5 +1,7 @@
 # 独立适配包制作指南
 
+新图像与视频操作使用[操作输入 v1](profiles/operation-input-v1/README.zh-CN.md)。包声明参数、执行元数据预检，并将冻结值映射为平台请求。现有正式应用在统一升级前继续使用当前操作合同。
+
 SDK 2.4.0的[media-projection-v1](profiles/media-projection-v1/README.zh-CN.md)支持180/360图片与视频。`examples/sync-api`通过Cargo feature `media-projection`启用中立图视频样例，manifest必须要求同名profile，并重新测量WASM/manifest摘要；不能与旧image-projection feature混用或沿用默认inventory。已有`image-projection-v1`样例仍保留原合同。完整SDK与产品验收分开记录，不把样例通过称为主应用已接通。
 
 语义profile无host import，因此Invocation.enabledFeatures只填需要import的已协商子集；参照validator `package::invocation_features`和公开feature catalog。完整包特性仍由宿主验证，旧宿主必须拒绝新包。成功data按media.id关联真实投影，原件MIME/文件名/几何以SDK broker为准；HTTP/stat/checkpoint先解码公开DTO，不用简化mock省略必填nullable字段。
@@ -204,6 +206,8 @@ if ($LASTEXITCODE -eq 0) { throw '缺证据不应返回成功' }
 
 command/exitCode 是证据声明，conform 不代替你执行所写命令；EVIDENCE_DECLARATION 与实际重放的 ACTUALLY_EXECUTED 必须区分。C28 必须有真正执行的匹配 tape。即使完整性/重放检查通过，也不能把声明字段当完整 36 case 的实际测试或独立作者证明。[完整验收条件](CONFORMANCE.zh-CN.md)还要求真实故障矩阵、隔离作者和候选复现材料。
 
+操作输入包可声明 C37。将预检通过、消费该准备的提交、带具体字段指针的拒绝分别记录为同包的 `TRANSCRIPT`，并在 C37 下列出摘要。`conform` 回放后核对操作身份、输入、配置、环境和准备摘要。三类证据齐全时 C37 标记 `ACTUALLY_EXECUTED`。
+
 ## 7 发行与许可边界
 
 本稿尚未提供已验收的 export_sdk.py、verify_release.py、check_author_evidence.py 发行工作链；不要把这些未来工具名当作当前可用 CLI 子命令。候选导出、G00–G06、C01–C36 及最终 SDK_READY 必须由完整真实证据决定；局部 --self-test 通过不能替代后续独立作者和重现。
@@ -222,5 +226,11 @@ command/exitCode 是证据声明，conform 不代替你执行所写命令；EVID
 所有形状执行同一 `minCount/maxCount`、槽内重复 ID、request.media ID 闭集及 mediaKind 校验；对象不允许额外键。媒体句柄仍经broker验证活动租约、包/绑定/请求归属及真实文件事实，字符串不是路径或URL，不赋予额外文件访问权限。缺失/null只在声明的最小数量及inputSchema允许时合法。
 
 ## 操作预检源码实施（未发行）
+
+操作需要使用 `host-websocket` 时声明 `websocket-v1`。`ws` 或 `wss` 按对应的 HTTP 源站核网络权限、DNS 与凭据。句柄归当前调用所有，收发文本或二进制消息。带有限等待的读取可返回 `idle` 并保留连接。用毕关闭句柄。元数据预检禁止使用此端口。
+
+协商启用 `jwt-host-time-v1` 后，`jwt-hs256` 签名规格可传 `hostTime`，包含 `lifetimeSeconds` 与 `notBeforeLeewaySeconds`。`claimsJson` 省略 `iss`、`nbf` 与 `exp`，宿主按授权凭据的公开标识与 UTC 时钟填入。签发结果仅用于该凭据获准的源站。
+
+启用 `derived-hmac-credential-v1` 且凭据授权 `hmac-sha256-credential` 时，可调用 `credential-utc-seconds` 读取十进制 Unix 秒字符串，由包按平台规则组装日期和规范请求。`hmac-sha256-credential` 的 `derivation` 可传有序 `messages` 与 `authorizationTemplate`。模版支持 `{publicId}`、`{date}` 及必填的 `{hexHmacOfCanonical}`。派生密钥留在宿主，HTTP 代理只在该凭据授权的源站接受生成的授权头。
 
 隔离语音驱动任务新增 `probe.kind=operation_preflight`。必须要求 `operation-preflight-v1`；语音驱动视频还必须要求 `video-speech-v1`。选择已发现操作的模型/操作/schema身份，传入包schema允许的input、冻结configuration和媒体摘要。运行时只允许诊断日志，服务/模型就绪未知必须阻断；不授权上传、生成或checkpoint写入。详见[语音驱动profile](profiles/video-speech-v1/README.zh-CN.md)。本批未编译未测试，生成类型和公开SDK发行尚待后续。

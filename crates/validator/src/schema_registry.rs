@@ -24,6 +24,7 @@ pub(crate) fn public_documents() -> Vec<Value> {
         "capability-contract",
         "control-operations",
         "operation-preflight",
+        "operation-input",
         "operation-payload",
         "result",
         "media-input",
@@ -468,7 +469,7 @@ impl SchemaRegistry {
     pub fn schema(&self, id: &str) -> Option<&Value> {
         self.documents.get(id)
     }
-    /// Resolve a JSON Pointer through object properties using the native registry's
+    /// Resolve a JSON Pointer through properties and indexed array items using the native registry's
     /// scoped IDs, anchors and references; this is structural form introspection.
     pub fn input_field_schema(&self, id: &str, pointer: &str) -> Result<Value, ContractError> {
         if !pointer.is_empty() && !pointer.starts_with('/') {
@@ -497,10 +498,18 @@ impl SchemaRegistry {
             .flat_map(|path| path.split('/'))
         {
             (node, scoped) = resolve_node(node, scoped, pointer)?;
+            if segment.split('~').skip(1).any(|escape| !escape.starts_with(['0', '1'])) {
+                return Err(ContractError::new("INVALID_PACKAGE", pointer, "invalid JSON Pointer escape"));
+            }
             let key = segment.replace("~1", "/").replace("~0", "~");
-            node = node
-                .get("properties")
-                .and_then(|p| p.get(&key))
+            let property = node.get("properties").and_then(|p| p.get(&key));
+            let index = key.parse::<usize>().ok().filter(|index| index.to_string() == key);
+            let has_items = node.get("items").is_some() || node.get("prefixItems").is_some();
+            let item = index.filter(|_| has_items).and_then(|index| {
+                node.get("prefixItems").and_then(|prefix| prefix.get(index))
+                    .or_else(|| node.get("items"))
+            });
+            node = property.or(item)
                 .ok_or_else(|| {
                     ContractError::new(
                         "UNSUPPORTED_FEATURE",

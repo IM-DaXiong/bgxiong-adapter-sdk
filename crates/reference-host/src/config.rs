@@ -64,37 +64,37 @@ pub(crate) fn save_upload(
     let value = serde_json::json!({"package":scope.package,"bindingId":scope.binding_id,"configurationDigest":configuration_digest,"mediaId":media_id,"mediaDigest":media_digest,"uploadRef":reference});
     policy.check(&value)?;
     let path = upload_path(workspace, scope, configuration_digest, reference)?;
-    let bytes = serde_json::to_vec(&value).unwrap();
-    if bytes.len() as u64
-        > resource_policy()["limits"]["maxStateBytes"]
-            .as_u64()
-            .unwrap()
-    {
-        return Err(fail(
-            "BUDGET_EXCEEDED",
-            "Upload receipt exceeds state byte budget",
-        ));
+    save_receipt(&path, &value)
+}
+
+fn save_receipt(path: &Path, value: &serde_json::Value) -> Result<()> {
+    let bytes = serde_json::to_vec(value).unwrap();
+    if bytes.len() as u64 > resource_policy()["limits"]["maxStateBytes"].as_u64().unwrap() {
+        return Err(fail("BUDGET_EXCEEDED", "Receipt exceeds state byte budget"));
     }
-    if path.exists() {
-        if bounded(&path, "maxStateBytes")? == bytes {
-            return Ok(());
+    let compare_existing = || {
+        if bounded(path, "maxStateBytes")? == bytes {
+            Ok(())
+        } else {
+            Err(fail("INVALID_INPUT", "Receipt key already has different contents"))
         }
-        return Err(fail(
-            "INVALID_INPUT",
-            "Upload reference was already issued for different media",
-        ));
+    };
+    if path.exists() {
+        return compare_existing();
     }
     let mut file = tempfile::NamedTempFile::new_in(path.parent().unwrap())
-        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Upload receipt staging failed"))?;
+        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Receipt staging failed"))?;
     std::io::Write::write_all(&mut file, &bytes)
-        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Upload receipt write failed"))?;
-    file.as_file()
-        .sync_all()
-        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Upload receipt sync failed"))?;
-    file.persist_noclobber(path)
-        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Upload receipt commit failed"))?;
-    Ok(())
+        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Receipt write failed"))?;
+    file.as_file().sync_all()
+        .map_err(|_| fail("RESOURCE_UNAVAILABLE", "Receipt sync failed"))?;
+    match file.persist_noclobber(path) {
+        Ok(_) => Ok(()),
+        Err(error) if error.error.kind() == ErrorKind::AlreadyExists => compare_existing(),
+        Err(_) => Err(fail("RESOURCE_UNAVAILABLE", "Receipt commit failed")),
+    }
 }
+
 pub(crate) fn read_upload(
     workspace: &DevelopmentWorkspace,
     scope: &crate::media::LeaseScope,
@@ -138,15 +138,28 @@ fn upload_path(
     configuration_digest: &str,
     reference: &str,
 ) -> Result<PathBuf> {
-    let directory = workspace.root().join("upload-receipts");
-    match fs::create_dir(&directory) {
-        Ok(()) => {}
-        Err(e) if e.kind() == ErrorKind::AlreadyExists => {}
-        Err(_) => {
-            return Err(fail(
-                "RESOURCE_UNAVAILABLE",
-                "Upload receipt directory is unavailable",
-            ))
+    let key = serde_json::to_vec(&serde_json::json!([
+        scope.package,
+        scope.binding_id,
+        configuration_digest,
+        reference
+    ]))
+    .unwrap();
+    receipt_path(workspace, "upload-receipts", &key, true)
+}
+
+fn receipt_path(
+    workspace: &DevelopmentWorkspace,
+    collection: &str,
+    key: &[u8],
+    create: bool,
+) -> Result<PathBuf> {
+    let directory = workspace.root().join(collection);
+    if create {
+        match fs::create_dir(&directory) {
+            Ok(()) => {}
+            Err(e) if e.kind() == ErrorKind::AlreadyExists => {}
+            Err(_) => return Err(fail("RESOURCE_UNAVAILABLE", "Receipt directory is unavailable")),
         }
     }
     if directory
@@ -158,27 +171,98 @@ fn upload_path(
     {
         return Err(fail(
             "PERMISSION_DENIED",
-            "Upload receipt directory escapes development workspace",
+            "Receipt directory escapes development workspace",
         ));
     }
-    let key = serde_json::to_vec(&serde_json::json!([
-        scope.package,
-        scope.binding_id,
-        configuration_digest,
-        reference
-    ]))
-    .unwrap();
-    let path = directory.join(format!("{}.json", hash_bytes(&key)));
+    let path = directory.join(format!("{}.json", hash_bytes(key)));
     if path.exists()
         && path.canonicalize().ok().as_deref().and_then(Path::parent) != Some(directory.as_path())
     {
         return Err(fail(
             "PERMISSION_DENIED",
-            "Upload receipt file escapes development workspace",
+            "Receipt file escapes development workspace",
         ));
     }
     Ok(path)
 }
+// Store the verified proof, never the user prompt or package preparation data.
+pub(crate) fn save_preparation(
+    config: &ReferenceConfig,
+    request: &serde_json::Value,
+    preparation: &serde_json::Value,
+    policy: &SnapshotPolicy,
+) -> Result<()> {
+    use bgx_adapter_v2_validator::operation_input;
+    let mut metadata = request["mediaMetadata"].as_array().unwrap().clone();
+    metadata.sort_by(|a, b| a["mediaId"].as_str().cmp(&b["mediaId"].as_str()));
+    let proof = serde_json::json!({
+        "selection": request["selection"],
+        "inputDigest": operation_input::digest(&request["input"]),
+        "mediaMetadata": metadata,
+        "environmentRevisionDigest": preparation["environmentRevisionDigest"],
+    });
+    let key = preparation_key(config, preparation);
+    policy.check(&proof)?;
+    save_receipt(&receipt_path(&config.workspace, "operation-preparations", &key, true)?, &proof)
+}
+
+fn preparation_key(config: &ReferenceConfig, preparation: &serde_json::Value) -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!([
+        config.configuration_ref,
+        preparation["requestDigest"],
+        preparation["materialDigest"],
+    ])).unwrap()
+}
+
+pub(crate) fn verify_preparation(
+    config: &ReferenceConfig,
+    selected: &bgx_adapter_v2_validator::capabilities::CapabilityRef,
+    request: &serde_json::Value,
+    host_media: &bgx_adapter_v2_validator::media::MediaValidationContext,
+    policy: &SnapshotPolicy,
+) -> Result<()> {
+    use bgx_adapter_v2_validator::{media::validate_leased_media, operation_input};
+    let stale = || fail("PREPARATION_STALE", "Preflight does not match the current operation, input, media or configuration");
+    let preparation = request.get("preparation").ok_or_else(stale)?;
+    operation_input::validate_value_budget(&preparation["material"], "/preparation/material")
+        .map_err(|_| stale())?;
+    if preparation["materialDigest"] != operation_input::digest(&preparation["material"]) {
+        return Err(stale());
+    }
+    let key = preparation_key(config, preparation);
+    let path = receipt_path(&config.workspace, "operation-preparations", &key, false)
+        .map_err(|_| stale())?;
+    let proof: serde_json::Value = serde_json::from_slice(&bounded(&path, "maxStateBytes").map_err(|_| stale())?)
+        .map_err(|_| stale())?;
+    policy.check(&proof)?;
+    if proof["selection"] != serde_json::to_value(selected).unwrap()
+        || proof["inputDigest"] != operation_input::digest(&request["input"])
+        || proof["environmentRevisionDigest"] != preparation["environmentRevisionDigest"]
+        || proof["environmentRevisionDigest"] != request["environmentRevisionDigest"]
+    {
+        return Err(stale());
+    }
+    let declared = proof["mediaMetadata"].as_array().ok_or_else(stale)?;
+    let current = request["media"].as_array().unwrap();
+    if declared.len() != current.len() {
+        return Err(stale());
+    }
+    for media in current {
+        let facts = validate_leased_media(media, host_media).map_err(|_| stale())?;
+        let expected = declared.iter().find(|entry| entry["mediaId"] == media["id"]).ok_or_else(stale)?;
+        if expected["sha256"] != facts.digest
+            || expected["kind"] != facts.kind
+            || expected["mime"] != facts.mime
+            || expected.get("width").is_some_and(|v| v.as_u64() != facts.width.map(u64::from))
+            || expected.get("height").is_some_and(|v| v.as_u64() != facts.height.map(u64::from))
+            || expected.get("durationMs").is_some_and(|v| v.as_u64() != facts.duration_ms)
+        {
+            return Err(stale());
+        }
+    }
+    Ok(())
+}
+
 pub struct LoadedPackage {
     pub(crate) root: PathBuf,
     pub(crate) verified: Arc<VerifiedPackage>,

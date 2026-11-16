@@ -166,6 +166,7 @@ pub struct ReferenceHost {
     active: Arc<Active>,
     before_send: Option<Arc<dyn crate::before_send::BeforeSendSink>>,
     managed_recovery_route: Option<crate::managed_route::ManagedRecoveryRoute>,
+    imported_query: Option<Arc<crate::imported_query::ImportedQuery>>,
 }
 struct Prepared {
     context: Option<Arc<ValidatedOperationInput>>,
@@ -231,6 +232,7 @@ impl ReferenceHost {
             client,
             before_send: None,
             managed_recovery_route: None,
+            imported_query: None,
             active: Arc::new(Active {
                 requests: Mutex::new(BTreeSet::new()),
                 cleanup_failures: Mutex::new(None),
@@ -246,6 +248,14 @@ impl ReferenceHost {
     pub fn with_managed_recovery_route(mut self, route: crate::managed_route::ManagedRecoveryRoute) -> Self {
         self.managed_recovery_route = Some(route);
         self
+    }
+    pub fn with_imported_query(mut self, query: crate::imported_query::ImportedQuery) -> Result<Self> {
+        query.validate_original(self.inner.package.verified().identity(), &self.inner.binding)?;
+        self.inner.snapshot.check(&query.original_checkpoint)?;
+        self.inner.snapshot.check(&query.original_frozen)?;
+        self.inner.snapshot.check(&encode(&query.review))?;
+        self.imported_query = Some(Arc::new(query));
+        Ok(self)
     }
     pub fn catalog(&self) -> Result<Vec<CapabilityView>> {
         Ok(lock(&self.inner.catalog)?.list(None))
@@ -360,6 +370,11 @@ impl ReferenceHost {
         }
         let i = encode(&invocation);
         SchemaRegistry::validate_public("invocation", &i).map_err(cv)?;
+        if self.imported_query.is_some()
+            && (self.managed_recovery_route.is_some() || !matches!(i["operation"].as_str(), Some("capabilities" | "query")))
+        {
+            return Err(fail("PERMISSION_DENIED", "Reviewed original task authorizes discovery and query only"));
+        }
         if self.managed_recovery_route.is_some() && i["operation"] != "capabilities" {
             let payload: Value = serde_json::from_str(i["payloadJson"].as_str().unwrap()).map_err(|_|fail("INVALID_INPUT","Invalid route payload"))?;
             if !matches!(i["operation"].as_str(), Some("query" | "cancel"))
@@ -390,7 +405,8 @@ impl ReferenceHost {
         let mut lease = CleanupLease(Some(cleanup.clone()));
         let result=async{
             let inner=self.inner.clone();let selected=reference.clone();let request=invocation.clone();let scope_copy=scope.clone();let c=control.clone();
-            let prepared=blocking(move||inner.prepare(&request,selected.as_ref(),checkpoint_request.as_deref(),&scope_copy,&c)).await?;
+            let imported = self.imported_query.clone();
+            let prepared=blocking(move||inner.prepare(&request,selected.as_ref(),checkpoint_request.as_deref(),&scope_copy,&c,imported.as_deref())).await?;
             if i["operation"] == "submit"
                 && self.inner.package.verified().enabled_features().contains(bgx_adapter_v2_validator::submission_resolution::FEATURE)
                 && prepared.context.as_ref().is_some_and(|context| context.operation()["execution"]["mode"] == "asynchronous") {
@@ -409,7 +425,17 @@ impl ReferenceHost {
                     .map_err(|_|fail("INVALID_INPUT","Submission identity response is invalid"))?;
                 lock(session)?.bind_submission_scope(&mut *lock(&self.inner.checkpoints)?, &request, &data)?;
             }
-            let enabled=!(i["operation"]=="capabilities"||(i["operation"]=="probe"&&serde_json::from_str::<Value>(i["payloadJson"].as_str().unwrap()).map_err(|_|fail("INVALID_INPUT","Invalid probe payload"))?["kind"].as_str().is_some_and(|kind| matches!(kind, "package_validation" | "operation_preflight"))));
+            let probe_payload = if i["operation"] == "probe" {
+                Some(serde_json::from_str::<Value>(i["payloadJson"].as_str().unwrap())
+                    .map_err(|_| fail("INVALID_INPUT", "Invalid probe payload"))?)
+            } else {
+                None
+            };
+            let metadata_only = probe_payload.as_ref().is_some_and(
+                bgx_adapter_v2_validator::operation_input::metadata_only_probe,
+            );
+            let enabled = i["operation"] != "capabilities" && !metadata_only
+                && !probe_payload.as_ref().is_some_and(|payload| payload["kind"] == "package_validation");
             let network=NetworkPolicy::new(self.inner.package.verified(),scope.clone(),self.inner.config.network.clone(),enabled).map_err(native)?;
             let mut vault=CredentialVault::new().map_err(native)?;
             if enabled {for credential in &self.inner.config.credentials{
@@ -440,7 +466,9 @@ impl ReferenceHost {
                         "route":route.audit()}),self.inner.snapshot.clone()).await?;
                 }
             }
-            let kernel=Kernel{metadata_only:i["operation"]=="probe" && serde_json::from_str::<Value>(i["payloadJson"].as_str().unwrap()).map_err(|_|fail("INVALID_INPUT","Invalid probe payload"))?["kind"]=="operation_preflight",inner:self.inner.clone(),scope:scope.clone(),http:http.clone(),streams:HttpStreams::new(http,self.inner.package.verified().enabled_features().clone()),publisher:publisher.clone(),context:prepared.context.clone(),session:prepared.session.clone(),root_id:prepared.root_id.clone(),trace:trace.clone()};
+            let features = self.inner.package.verified().enabled_features();
+            let sockets = crate::websocket::WebSockets::new(http.clone(), features.contains(crate::websocket::FEATURE));
+            let kernel=Kernel{metadata_only,inner:self.inner.clone(),scope:scope.clone(),http:http.clone(),streams:HttpStreams::new(http,features.clone()),sockets,publisher:publisher.clone(),context:prepared.context.clone(),session:prepared.session.clone(),root_id:prepared.root_id.clone(),trace:trace.clone()};
             let identity=serde_json::from_value(encode(self.inner.package.verified().identity())).map_err(|_|fail("INTERNAL_ERROR","Cannot encode verified package identity"))?;
             let worker=async{
                 let local_cancel=if i["operation"]=="cancel"{prepared.context.as_ref().map(|c|c.operation()["execution"]["cancellation"].clone()).filter(|v|v!="remote")}else{None};
@@ -482,7 +510,8 @@ impl ReferenceHost {
             let (worker,consumer)=tokio::join!(worker,consumer);
             let (worker_pid,response,events)=worker?;consumer?;
             let inner=self.inner.clone();let final_response=response.clone();let invoke=invocation.clone();let root=prepared.root_id.clone();let ctx=prepared.context.clone();let session=prepared.session.clone();let scope_copy=scope.clone();let finish_control=control.clone();
-            let cancellation=match blocking(move||inner.finish(&invoke,&final_response,reference.as_ref(),root.as_deref(),ctx.as_deref(),session.as_ref(),&scope_copy,&finish_control)).await {
+            let imported = self.imported_query.clone();
+            let cancellation=match blocking(move||inner.finish(&invoke,&final_response,reference.as_ref(),root.as_deref(),ctx.as_deref(),session.as_ref(),&scope_copy,&finish_control,imported.as_deref())).await {
                 Ok(value)=>value,
                 Err(error)=>{
                     trace.emit(json!({"stage":"receipt_validation","requestId":scope.request_id,"code":error.code}),self.inner.snapshot.clone()).await?;
@@ -510,6 +539,7 @@ impl Inner {
         root_id: Option<&str>,
         scope: &LeaseScope,
         control: &Control,
+        imported_query: Option<&crate::imported_query::ImportedQuery>,
     ) -> Result<Prepared> {
         check_control(control)?;
         let i = encode(invocation);
@@ -576,7 +606,12 @@ impl Inner {
                     return Ok(prepared);
                 }
                 if root_id.is_some() { return Err(fail("INVALID_INPUT", "This probe cannot access a task checkpoint")); }
-                if payload["kind"] == "operation_preflight" {
+                if bgx_adapter_v2_validator::operation_input::is_probe(&payload) {
+                    let selected = reference.ok_or_else(|| fail("INVALID_INPUT", "Preflight requires an explicit capability reference"))?;
+                    bgx_adapter_v2_validator::operation_input::validate_request(
+                        &*lock(&self.catalog)?, selected, &self.binding, &payload,
+                    ).map_err(cv)?;
+                } else if payload["kind"] == "operation_preflight" {
                     let selected = reference.ok_or_else(|| fail("INVALID_INPUT", "Operation preflight requires an explicit capability reference"))?;
                     bgx_adapter_v2_validator::operation_preflight::validate_request(
                         &*lock(&self.catalog)?, selected, &self.binding,
@@ -653,6 +688,9 @@ impl Inner {
                     );
                 }
                 validate_host_media(&context, &facts).map_err(cv)?;
+                if bgx_adapter_v2_validator::operation_input::uses_profile(context.operation()) {
+                    config::verify_preparation(&self.config, selected, &payload, &facts, &self.snapshot)?;
+                }
                 let mut store = lock(&self.checkpoints)?;
                 let session = Session::prepare(
                     &mut store,
@@ -675,6 +713,12 @@ impl Inner {
                         "Query/cancel requires the original checkpoint identity",
                     )
                 })?;
+                if let Some(imported) = imported_query {
+                    let catalog = lock(&self.catalog)?;
+                    let context = imported.prepare(self.package.verified(), &self.binding, &catalog, root, &i["capabilitySlot"], &payload)?;
+                    prepared.context = Some(Arc::new(context));
+                    return Ok(prepared);
+                }
                 let session = Session::recover(
                     &*lock(&self.checkpoints)?,
                     root,
@@ -773,6 +817,7 @@ impl Inner {
         session: Option<&Arc<Mutex<Session>>>,
         scope: &LeaseScope,
         control: &Control,
+        imported_query: Option<&crate::imported_query::ImportedQuery>,
     ) -> Result<Option<CancellationReceipt>> {
         validate_response(invocation, response, context).map_err(cv)?;
         let r = encode(response);
@@ -805,7 +850,13 @@ impl Inner {
             "probe" => {
                 let payload: Value = serde_json::from_str(i["payloadJson"].as_str().unwrap())
                     .map_err(|_| fail("INVALID_INPUT", "Invalid probe payload"))?;
-                if payload["kind"] == "operation_preflight" { return Ok(None); }
+                if bgx_adapter_v2_validator::operation_input::is_probe(&payload) {
+                    if let Some(preparation) = bgx_adapter_v2_validator::operation_input::seal_result(&payload, &data).map_err(cv)? {
+                        config::save_preparation(&self.config, &payload, &preparation, &self.snapshot)?;
+                    }
+                    return Ok(None);
+                }
+                if bgx_adapter_v2_validator::operation_input::metadata_only_probe(&payload) { return Ok(None); }
                 if bgx_adapter_v2_validator::submission_resolution::is_kind(&payload) {
                     if payload["kind"] == "submission_resolution" {
                         lock(session.ok_or_else(||fail("INVALID_INPUT","Resolution session missing"))?)?.apply_submission_resolution(
@@ -846,6 +897,10 @@ impl Inner {
                 let context = context
                     .ok_or_else(|| fail("INTERNAL_ERROR", "Frozen operation context missing"))?;
                 let media = lock(&self.media)?;
+                if let Some(imported) = imported_query {
+                    imported.validate_outputs(&data, context, &media, scope)?;
+                    return Ok(None);
+                }
                 let result: OperationResultV2 = serde_json::from_value(data.clone())
                     .map_err(|_| fail("INVALID_INPUT", "Operation result is invalid"))?;
                 let mut session = lock(
@@ -1118,6 +1173,7 @@ struct Kernel {
     scope: LeaseScope,
     http: Arc<HttpBroker>,
     streams: HttpStreams,
+    sockets: crate::websocket::WebSockets,
     publisher: EventPublisher,
     context: Option<Arc<ValidatedOperationInput>>,
     session: Option<Arc<Mutex<Session>>>,
@@ -1181,6 +1237,18 @@ impl ManagedHost for Kernel {
                 "host-http-stream.close" => {
                     self.streams
                         .close(&self.scope, args["streamId"].as_str().unwrap())?;
+                    Value::Null
+                }
+                "host-websocket.open" => self.sockets.open(args, control).await?,
+                "host-websocket.read" => {
+                    self.sockets.read(args["socketId"].as_str().unwrap(), args["timeoutMs"].as_u64().unwrap(), control).await?
+                }
+                "host-websocket.write" => {
+                    self.sockets.write(args["socketId"].as_str().unwrap(), &args["message"], control).await?;
+                    Value::Null
+                }
+                "host-websocket.close" => {
+                    self.sockets.close(args["socketId"].as_str().unwrap(), control).await?;
                     Value::Null
                 }
                 "host-media.info" => {

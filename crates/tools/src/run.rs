@@ -211,6 +211,7 @@ fn host_error(e: CheckpointError) -> crate::Error {
         "BUDGET_EXCEEDED" => "BUDGET_EXCEEDED",
         "CANCELLED" => "CANCELLED",
         "CONFLICT" => "CONFLICT",
+        "PREPARATION_STALE" => "PREPARATION_STALE",
         _ => "HOST_ERROR",
     });
     let message = if code == "HOST_ERROR" {
@@ -397,8 +398,12 @@ async fn dispatch(
             )
         })?;
     policy.check(&payload).map_err(host_error)?;
+    let input_preflight = args.operation == "probe"
+        && bgx_adapter_v2_validator::operation_input::is_probe(&payload);
+    let imported_query = args.operation == "query" && config.imported_query.is_some();
     let discover = matches!(args.operation.as_str(), "submit" | "upload")
-        || (args.operation == "probe" && matches!(payload["kind"].as_str(), Some("connectivity" | "operation_preflight")));
+        || (args.operation == "probe" && matches!(payload["kind"].as_str(), Some("connectivity" | "operation_preflight")))
+        || input_preflight || imported_query;
     let mut reference: Option<CapabilityRef> = None;
     if discover {
         let mut discovery = invocation.clone();
@@ -434,7 +439,11 @@ async fn dispatch(
                 "Capability discovery failed; inspect discovery.response.json",
             ));
         }
-        if args.operation != "probe" || payload["kind"] == "operation_preflight" {
+        if input_preflight {
+            let selected: CapabilityRef = serde_json::from_value(payload["selection"].clone())
+                .map_err(|_| workspace::invalid("selection", "Invalid frozen operation selection"))?;
+            reference = Some(selected);
+        } else if !imported_query && (args.operation != "probe" || payload["kind"] == "operation_preflight") {
             let mut matches = host
                 .catalog()
                 .map_err(host_error)?
@@ -530,7 +539,18 @@ async fn dispatch(
         )
         .await
         .map_err(host_error)?;
-    Ok(serde_json::to_value(receipt.response).expect("standard response"))
+    let response = serde_json::to_value(receipt.response).expect("standard response");
+    if input_preflight {
+        if let Some(data) = response["dataJson"].as_str() {
+            let data: Value = serde_json::from_str(data)
+                .map_err(|_| workspace::invalid("dataJson", "Invalid preflight result"))?;
+            if let Some(preparation) = bgx_adapter_v2_validator::operation_input::seal_result(&payload, &data)
+                .map_err(|error| workspace::invalid(error.path, error.reason))? {
+                workspace::atomic_json(workspace, &directory.join("operation-preparation.json"), &preparation)?;
+            }
+        }
+    }
+    Ok(response)
 }
 pub async fn execute(args: &[String]) -> crate::Result<Value> {
     execute_inner(args, None).await
@@ -678,6 +698,12 @@ async fn execute_inner(
     let host = if let Some(route) = &config.managed_recovery_route {
         host.with_managed_recovery_route(route.clone())
     } else { host };
+    let host = if let Some(imported) = &config.imported_query {
+        if args.host_checkpoints || !matches!(args.operation.as_str(), "capabilities" | "query") {
+            return Err(workspace::invalid("importedQuery", "Reviewed original-task recovery only permits query in its isolated SDK workspace"));
+        }
+        host.with_imported_query(imported.clone()).map_err(host_error)?
+    } else { host };
     let directory = diagnostic_directory(&workspace, input["requestId"].as_str().unwrap())?;
     let auditor = crate::host_channel::AuditChannel::open(&directory, args.host_channel).await?;
     let host = host.with_before_send(Arc::new(auditor));
@@ -709,6 +735,9 @@ async fn execute_inner(
             let diagnostic = json!({"code":e.code,"message":e.message});
             policy.check(&diagnostic).map_err(host_error)?;
             workspace::atomic_json(&workspace, &directory.join("host.error.json"), &diagnostic)?;
+            if recording.is_some() {
+                return Err(e);
+            }
             match wire_failure(&args.operation, &e) {
                 Some(response) => response,
                 None => return Err(e),

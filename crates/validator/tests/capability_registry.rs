@@ -7,9 +7,9 @@ fn package() -> VerifiedPackage {
     negotiated_package(false, false).unwrap()
 }
 
-fn preflight_package() -> VerifiedPackage {
+fn preflight_package(feature: &str) -> VerifiedPackage {
     let manifest=json!({"schemaVersion":2,"pluginId":"local.catalog","displayName":"Catalog","version":"1.0.0",
-        "protocolRange":{"min":2,"max":2},"requiredFeatures":["operation-preflight-v1"],"optionalFeatures":[],"language":"rust",
+        "protocolRange":{"min":2,"max":2},"requiredFeatures":[feature],"optionalFeatures":[],"language":"rust",
         "entry":"adapter.wasm","artifactSha256":hash_bytes(b"test"),"publisherId":null,"publisherKeyId":null,
         "requestedCapabilities":{"endpointPolicy":["userConfigurable"],"networkHosts":[],"allowPrivateNetwork":false,
         "auth":["none"],"mediaSlots":[],"stateBytes":0,"embeddedHeaders":[]},
@@ -18,14 +18,14 @@ fn preflight_package() -> VerifiedPackage {
     let files=BTreeMap::from([("manifest.json".into(),hash_bytes(&bytes)),("adapter.wasm".into(),hash_bytes(b"test"))]);
     let inventory=files.iter().map(|(k,v)|format!("{v} {k}\n")).collect::<String>();
     let mut trust=TrustContext::default();
-    trust.supported_features.insert("operation-preflight-v1".into());
+    trust.supported_features.insert(feature.into());
     verify_package(&PackageContents{manifest_bytes:&bytes,hash_manifest_bytes:inventory.as_bytes(),signature:None,measured_file_hashes:&files},&trust).unwrap()
 }
 
 #[test]
 fn operation_preflight_binds_catalog_configuration_schema_and_media_summaries() {
     use bgx_adapter_v2_validator::operation_preflight::validate_request;
-    let package = preflight_package();
+    let package = preflight_package("operation-preflight-v1");
     let configuration=json!({"endpointBaseUrl":"https://example.invalid"});
     let binding=Binding::new("preflight".into(),&package,1,configuration.clone()).unwrap();
     let mut catalog=CapabilityRegistry::default();
@@ -234,4 +234,70 @@ fn speech_diarization_profile_preserves_source_anchors_and_explicit_overlap_supp
     registry.validate(&format!("{base}diarize.output.schema.json"),&output).unwrap();
     let mut bad=output;bad.as_object_mut().unwrap().remove("overlapDetection");assert!(registry.validate(&format!("{base}diarize.output.schema.json"),&bad).is_err());
     registry.validate(&format!("{base}resume.schema.json"),&json!({"schemaVersion":1,"sourceFingerprint":"a".repeat(64),"jobId":"retained-job"})).unwrap();
+}
+
+#[test]
+fn operation_input_profile_uses_each_packages_schema_and_preserves_open_json() {
+    use bgx_adapter_v2_validator::operation_input::{self, FEATURE};
+
+    fn declaration(id: &str, choices: &[&str]) -> CapabilityContractV2 {
+        let mut contract = serde_json::to_value(&contracts()[0]).unwrap();
+        let schema = json!({
+            "type":"object",
+            "required":["彩/色~","motion","options","kind"],
+            "properties":{
+                "彩/色~":{"type":"string","enum":choices},
+                "motion":{"type":"object","properties":{"seconds":{"type":"number","minimum":0.25}},"required":["seconds"]},
+                "options":{"type":"array","items":{"type":"object","properties":{"enabled":{"type":"boolean"}}}},
+                "kind":{"const":"workflow-native"}
+            },
+            "additionalProperties":false
+        }).to_string();
+        let digest = hash_bytes(schema.as_bytes());
+        for resource in contract["schemas"].as_array_mut().unwrap() {
+            if resource["id"] == "input" {
+                resource["schemaJson"] = json!(schema);
+                resource["digest"] = json!(digest);
+            }
+        }
+        let operation = &mut contract["operations"][0];
+        operation["id"] = json!(id);
+        operation["inputProfile"] = json!("operation-input-v1");
+        operation["inputSchema"]["digest"] = json!(digest);
+        operation["uiSchema"]["controls"] = json!([
+            {"fieldPointer":"/彩~1色~0","widget":"select","label":"色彩","description":"","group":"","displayRole":"new-role"},
+            {"fieldPointer":"/motion/seconds","widget":"number","label":"时长","description":"","group":"","displayRole":"duration"},
+            {"fieldPointer":"/options","widget":"repeat","label":"选项","description":"","group":""}
+        ]);
+        serde_json::from_value(contract).unwrap()
+    }
+
+    let package = preflight_package(FEATURE);
+    let configuration = json!({"endpointBaseUrl":"https://example.invalid"});
+    let binding = Binding::new("new-operation".into(), &package, 1, configuration.clone()).unwrap();
+    let mut catalog = CapabilityRegistry::default();
+    let a = declaration("local.catalog/model-a", &["柔和", "浓郁"]);
+    let b = declaration("local.catalog/model-b", &["自然"]);
+    let refs = catalog.register(&package, &binding, &[a.clone(), b]).unwrap();
+    let a_ref = refs.iter().find(|r| r.operation_id == "local.catalog/model-a").unwrap();
+    let b_ref = refs.iter().find(|r| r.operation_id == "local.catalog/model-b").unwrap();
+    let mut request = json!({
+        "schemaVersion":2,"kind":"operation_input_preflight",
+        "selection":a_ref,"configuration":configuration,
+        "environment":{"revisionDigest":"e".repeat(64),"ready":true},
+        "input":{"彩/色~":"柔和","motion":{"seconds":0.75},"options":[{"enabled":false}],"kind":"workflow-native"},
+        "mediaMetadata":[]
+    });
+    request["requestDigest"] = json!(operation_input::request_digest(&request).unwrap());
+    operation_input::validate_request(&catalog, a_ref, &binding, &request).unwrap();
+
+    request["selection"] = json!(b_ref);
+    request["requestDigest"] = json!(operation_input::request_digest(&request).unwrap());
+    let error = operation_input::validate_request(&catalog, b_ref, &binding, &request).unwrap_err();
+    assert_eq!(error.code, "INVALID_INPUT");
+    assert_eq!(error.path, "/彩~1色~0");
+
+    let unnegotiated = preflight_package("operation-preflight-v1");
+    let binding = Binding::new("old-operation".into(), &unnegotiated, 1, configuration).unwrap();
+    assert_eq!(catalog.register(&unnegotiated, &binding, &[a]).unwrap_err().code, "UNSUPPORTED_FEATURE");
 }

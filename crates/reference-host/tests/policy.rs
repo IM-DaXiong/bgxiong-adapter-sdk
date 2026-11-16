@@ -79,6 +79,103 @@ fn material(secret: &[u8]) -> DevelopmentSecret {
 }
 
 #[test]
+fn host_timed_jwt_uses_bound_issuer_and_clock() {
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let origin = "https://api.example.invalid";
+    let other = "https://media.example.invalid";
+    let clock = || SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let spec = json!({
+        "version": 1, "kind": "jwt-hs256", "claimsJson": "{\"sub\":\"example\"}",
+        "hostTime": {"lifetimeSeconds": 1800, "notBeforeLeewaySeconds": 5}
+    });
+    for enabled in [false, true] {
+        let features: &[&str] = if enabled { &["jwt-host-time-v1"] } else { &[] };
+        let package = package_features(false, features);
+        let policy = policy(&package, "host-timed-jwt", &[origin, other], false);
+        let mut vault = CredentialVault::new().unwrap();
+        let handle = vault.insert(
+            &policy,
+            material(b"test-only-signing-key"),
+            BTreeSet::from(["jwt-hs256".into()]),
+            vec![origin.into()],
+            Duration::from_secs(60),
+        ).unwrap();
+
+        let before = clock();
+        let result = vault.sign(&policy, &handle, &spec.to_string());
+        if !enabled {
+            assert!(result.is_err());
+            continue;
+        }
+        let token = result.unwrap();
+        let after = clock();
+        let payload = token.split('.').nth(1).unwrap();
+        let claims: Value = serde_json::from_slice(&URL_SAFE_NO_PAD.decode(payload).unwrap()).unwrap();
+        assert_eq!(claims["iss"], "public-id");
+        assert_eq!(claims["sub"], "example");
+        assert!((before + 1800..=after + 1800).contains(&claims["exp"].as_u64().unwrap()));
+        assert!((before - 5..=after - 5).contains(&claims["nbf"].as_u64().unwrap()));
+
+        let mut request = plan(origin);
+        request["headers"] = json!([{"name": "Authorization", "value": format!("Bearer {token}")}]);
+        assert!(vault.headers(&policy, origin, &request, Some(&handle)).is_ok());
+        assert!(vault.headers(&policy, other, &request, None).is_err());
+
+        let mut forged = spec.clone();
+        forged["claimsJson"] = json!("{\"iss\":\"different-account\"}");
+        assert!(vault.sign(&policy, &handle, &forged.to_string()).is_err());
+    }
+}
+
+#[test]
+fn derived_hmac_credential_uses_ordered_messages_and_keeps_keys_private() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let origin = "https://api.example.invalid";
+    let clock = || SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let spec = json!({
+        "version": 1, "kind": "hmac-sha256-credential", "canonical": "canonical request", "date": "20261116T010203Z",
+        "derivation": {
+            "messages": ["20261116", "region", "service", "request"],
+            "authorizationTemplate": "HMAC-SHA256 Credential={publicId}/20261116/region/service/request, SignedHeaders=host;x-date, Signature={hexHmacOfCanonical}"
+        }
+    });
+    for enabled in [false, true] {
+        let features: &[&str] = if enabled { &["derived-hmac-credential-v1"] } else { &[] };
+        let package = package_features(false, features);
+        let policy = policy(&package, "derived-hmac", &[origin], false);
+        let mut vault = CredentialVault::new().unwrap();
+        let handle = vault.insert(
+            &policy,
+            material(b"example-signing-key"),
+            BTreeSet::from(["hmac-sha256-credential".into()]),
+            vec![origin.into()],
+            Duration::from_secs(60),
+        ).unwrap();
+        let before = clock();
+        let seconds = vault.sign(&policy, &handle, r#"{"version":1,"kind":"credential-utc-seconds"}"#);
+        let authorization = vault.sign(&policy, &handle, &spec.to_string());
+        if !enabled {
+            assert!(seconds.is_err());
+            assert!(authorization.is_err());
+            continue;
+        }
+        assert!((before..=clock()).contains(&seconds.unwrap().parse::<u64>().unwrap()));
+        let authorization = authorization.unwrap();
+        assert_eq!(authorization, "HMAC-SHA256 Credential=public-id/20261116/region/service/request, SignedHeaders=host;x-date, Signature=b3fe025c58b6a09c4e213b47a53917eb851ec416a6d9819b7b0fff5f2d4b2e1c");
+        let mut request = plan(origin);
+        request["headers"] = json!([{"name": "Authorization", "value": authorization}]);
+        assert!(vault.headers(&policy, origin, &request, Some(&handle)).is_ok());
+        assert!(vault.headers(&policy, "https://other.example.invalid", &request, None).is_err());
+        let mut unsigned = spec.clone();
+        unsigned["derivation"]["authorizationTemplate"] = json!("unsigned value");
+        assert!(vault.sign(&policy, &handle, &unsigned.to_string()).is_err());
+    }
+}
+
+#[test]
 fn network_gate_and_credentials_have_no_implicit_privilege_or_secret_return() {
     let package = package(false);
     let p = policy(&package, "request", &["https://api.example.invalid"], false);

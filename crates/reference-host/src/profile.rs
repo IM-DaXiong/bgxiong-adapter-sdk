@@ -725,7 +725,7 @@ impl Profile {
                 control,
             );
         }
-        if transport == "probe" && payload["kind"] == "operation_preflight" {
+        if transport == "probe" && bgx_adapter_v2_validator::operation_input::metadata_only_probe(&payload) {
             return error_response(invocation, "UNSUPPORTED_FEATURE",
                 "This declarative profile has no metadata-only operation preflight plan", None);
         }

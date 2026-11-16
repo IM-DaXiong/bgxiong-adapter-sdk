@@ -40,6 +40,8 @@ pub struct NetworkPolicy {
     denied_networks: Vec<IpNet>,
     auth_modes: Vec<String>,
     opaque_file_upload_names: bool,
+    jwt_host_time: bool,
+    derived_hmac_credential: bool,
 }
 pub struct Destination {
     pub url: Url,
@@ -135,6 +137,8 @@ impl NetworkPolicy {
         Ok(Self {
             scope,
             opaque_file_upload_names: package.enabled_features().contains("opaque-file-upload-name-v1"),
+            jwt_host_time: package.enabled_features().contains("jwt-host-time-v1"),
+            derived_hmac_credential: package.enabled_features().contains("derived-hmac-credential-v1"),
             origins,
             allow_private,
             embedded_authorization,
@@ -155,6 +159,13 @@ impl NetworkPolicy {
     }
     pub(crate) fn permits_opaque_file_upload_names(&self) -> bool {
         self.opaque_file_upload_names
+    }
+    pub(crate) fn permits_jwt_host_time(&self) -> bool {
+        self.jwt_host_time
+    }
+
+    pub(crate) fn permits_derived_hmac_credential(&self) -> bool {
+        self.derived_hmac_credential
     }
     pub fn auth_modes(&self) -> &[String] {
         &self.auth_modes

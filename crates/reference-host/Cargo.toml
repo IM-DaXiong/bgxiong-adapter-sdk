@@ -29,6 +29,7 @@ base64.workspace = true
 zeroize.workspace = true
 futures-util.workspace = true
 tokio-util.workspace = true
+tokio-tungstenite = { version = "=0.26.2", default-features = false, features = ["handshake"] }
 rusqlite.workspace = true
 
 [dev-dependencies]

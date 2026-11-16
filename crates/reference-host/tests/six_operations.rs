@@ -67,14 +67,22 @@ fn fixture() -> &'static Fixture {
         let config=json!({"type":"object","properties":{"endpointBaseUrl":{"type":"string"},"credentialRef":{"type":"string"}},"required":["endpointBaseUrl","credentialRef"],"additionalProperties":false}).to_string();
         let input=json!({"type":"object","properties":{"prompt":{"type":"string"},"strength":{"type":"number","minimum":0,"maximum":1},"source":{"type":"object","properties":{"mediaId":{"type":"string"}},"required":["mediaId"],"additionalProperties":false}},"required":["prompt","strength"],"additionalProperties":false}).to_string();
         let mut contracts=vec![];
-        for (index,name) in ["sync","async","classify"].iter().enumerate(){
-            let mut c=examples["capabilities"][usize::from(index==1)].clone();c["localId"]=json!(name);c["transportSlot"]=json!(if index==2{"generic"}else{"video"});
-            c["capabilityKey"]=json!(if index==2{"local.six/classify"}else{"video.generate"});c["operations"][0]["id"]=json!(format!("local.six/{name}"));
+        for (index,name) in ["sync","async","classify","prepared"].iter().enumerate(){
+            let mut c=examples["capabilities"][usize::from(index==1)].clone();c["localId"]=json!(name);c["transportSlot"]=json!(if index>=2{"generic"}else{"video"});
+            c["capabilityKey"]=json!(match index {2=>"local.six/classify",3=>"local.six/prepared",_=>"video.generate"});c["operations"][0]["id"]=json!(format!("local.six/{name}"));
             c["operations"][0]["execution"]["streaming"]=json!(index==0);c["operations"][0]["execution"]["cancellation"]=json!("remote");
             c["operations"][0]["mediaSlots"]=json!([{"role":"source","inputPointer":"/source","mediaKind":"image","minCount":0,"maxCount":null}]);
             if index==0{c["operations"][0]["outputSlots"]=json!([{"role":"artifact","kind":"file","minCount":1,"maxCount":null}]);}
             for schema in c["schemas"].as_array_mut().unwrap(){if schema["id"]=="config"{schema["schemaJson"]=json!(config);schema["digest"]=json!(hash_bytes(config.as_bytes()));}if schema["id"]=="input"{schema["schemaJson"]=json!(input);schema["digest"]=json!(hash_bytes(input.as_bytes()));}}
-            c["configurationSchema"]["digest"]=json!(hash_bytes(config.as_bytes()));c["operations"][0]["inputSchema"]["digest"]=json!(hash_bytes(input.as_bytes()));contracts.push(c);
+            c["configurationSchema"]["digest"]=json!(hash_bytes(config.as_bytes()));c["operations"][0]["inputSchema"]["digest"]=json!(hash_bytes(input.as_bytes()));
+            if index == 3 {
+                c["operations"][0]["inputProfile"] = json!("operation-input-v1");
+                c["operations"][0]["uiSchema"]["controls"] = json!([
+                    {"fieldPointer":"/prompt","widget":"text","label":"Prompt","description":"","group":""},
+                    {"fieldPointer":"/strength","widget":"number","label":"Strength","description":"","group":""}
+                ]);
+            }
+            contracts.push(c);
         }
         fs::write(source.path().join("src/capabilities.json"),json!({"schemaVersion":2,"pluginId":"local.six","pluginVersion":"1.0.0","capabilityContracts":contracts}).to_string()).unwrap();
         let guest=r###"
@@ -96,10 +104,41 @@ fn http(host:&mut dyn Host,config:&Value,path:&str,body:Value)->Value{
  let response:Value=host::call(host,"host-http.execute",&json!({"plan":plan,"credential":config["credentialRef"]})).unwrap();
  assert_eq!(response["status"],200);let bytes:Vec<u8>=serde_json::from_value(response["payload"]["bytes"].clone()).unwrap();serde_json::from_slice(&bytes).unwrap()
 }
+fn socket_args(config:&Value,path:&str)->Value{
+ let base=config["endpointBaseUrl"].as_str().unwrap().replacen("http://","ws://",1);
+ json!({"plan":{"url":format!("{base}/{path}"),"timeoutMs":5000,"maxMessageBytes":64,"headers":[],"generatedHeaders":[{"kind":"bearer","name":"Authorization","targetField":"Authorization"}]},"credential":config["credentialRef"]})
+}
+fn socket_probe(host:&mut dyn Host,config:&Value,mode:&str)->Value{
+ if mode=="ws-feature-denied" {
+   let result:Result<Value,_>=host::call(host,"host-websocket.open",&socket_args(config,"socket"));
+   assert_eq!(serde_json::to_value(result.unwrap_err()).unwrap()["code"],"PERMISSION_DENIED");
+   return json!({"packageValid":true,"connection":"not_checked","authentication":"not_checked","resources":"not_checked","issues":[]});
+ }
+ let mut denied=socket_args(config,"socket");denied["plan"]["url"]=json!("ws://127.0.0.1:1/ungranted");
+ let denied:Result<Value,_>=host::call(host,"host-websocket.open",&denied);assert!(denied.is_err());
+ let args=socket_args(config,"socket");
+ let opened:Value=host::call(host,"host-websocket.open",&args).unwrap();
+ let id=&opened["socketId"];
+ let read=|h:&mut dyn Host,wait|host::call::<_,Value>(h,"host-websocket.read",&json!({"socketId":id,"timeoutMs":wait}));
+ if mode=="ws-disconnect" || mode=="ws-cancel" {
+   let error=read(host,0).unwrap_err();
+   if mode=="ws-disconnect" {assert_eq!(serde_json::to_value(error).unwrap()["code"],"RESOURCE_UNAVAILABLE");}
+ }else{
+   assert_eq!(read(host,10).unwrap(),json!({"kind":"idle"}));
+   let big:Result<(),_>=host::call(host,"host-websocket.write",&json!({"socketId":id,"message":{"kind":"text","text":"x".repeat(65)}}));assert!(big.is_err());
+   for message in [json!({"kind":"text","text":"hello"}),json!({"kind":"binary","bytes":[0,255,73]})]{
+     let _:()=host::call(host,"host-websocket.write",&json!({"socketId":id,"message":message})).unwrap();
+     assert_eq!(read(host,1000).unwrap(),message);
+   }
+   let _:()=host::call(host,"host-websocket.close",&json!({"socketId":id})).unwrap();
+ }
+ assert!(read(host,1).is_err());
+ json!({"packageValid":true,"connection":"ready","authentication":"ready","resources":"ready","issues":[]})
+}
 impl Adapter for Guest{fn invoke(request:Invocation,host:&mut dyn Host)->Response{
  let i=serde_json::to_value(&request).unwrap();let op=i["operation"].as_str().unwrap();let p:Value=serde_json::from_str(i["payloadJson"].as_str().unwrap()).unwrap();
  let _:()=host::call(host,"host-log.log",&json!({"level":"info","code":"six.operation","message":op})).unwrap();
- if p["kind"]=="operation_preflight" {
+ if p["kind"]=="operation_preflight" || p["kind"]=="operation_input_preflight" {
    let denied:Result<(),_>=host::call(host,"host-state.put",&json!({"key":"last","value":op}));assert!(denied.is_err());
  }else{
    let _:()=host::call(host,"host-state.put",&json!({"key":"last","value":op})).unwrap();let saved:Option<String>=host::call(host,"host-state.get",&json!({"key":"last"})).unwrap();assert_eq!(saved.as_deref(),Some(op));
@@ -113,9 +152,17 @@ impl Adapter for Guest{fn invoke(request:Invocation,host:&mut dyn Host)->Respons
       http(host,&p["configuration"],"/resolve",json!({"kind":"none"}));
       json!({"kind":"submission_resolution","requestId":p["requestId"],"requestDigest":p["requestDigest"],"expectedRevision":p["expectedRevision"],"submissionScope":p["submissionScope"],"status":"accepted","accepted":{"kind":"accepted","vendorTaskId":"real-job-one","appliedParams":null,"resumeToken":null,"usage":null}})
     } else {
-    if p["kind"]=="package_validation"{
+    if p["kind"]=="connectivity" && i["requestId"].as_str().unwrap().starts_with("ws-") {
+      socket_probe(host,&p["configuration"],i["requestId"].as_str().unwrap())
+    }else if p["kind"]=="package_validation"{
       let denied:Result<Value,_>=host::call(host,"host-http.execute",&json!({"plan":{"method":"GET","url":"http://127.0.0.1/forbidden","headers":[],"generatedHeaders":[],"body":{"kind":"none"},"sink":{"kind":"buffer","maxBytes":64},"timeoutMs":100},"credential":null}));assert!(denied.is_err());
       json!({"packageValid":true,"connection":"not_checked","authentication":"not_checked","resources":"not_checked","issues":[]})
+    }else if p["kind"]=="operation_input_preflight"{
+      let denied:Result<Value,_>=host::call(host,"host-websocket.open",&socket_args(&p["configuration"],"socket"));assert!(denied.is_err());
+      let denied:Result<Value,_>=host::call(host,"host-http.execute",&json!({"plan":{"method":"GET","url":"http://127.0.0.1/forbidden","headers":[],"generatedHeaders":[],"body":{"kind":"none"},"sink":{"kind":"buffer","maxBytes":64},"timeoutMs":100},"credential":null}));assert!(denied.is_err());
+      let denied:Result<String,_>=host::call(host,"host-media.create",&json!({"kind":"file","mimeHint":"application/octet-stream"}));assert!(denied.is_err());
+      let denied:Result<Value,_>=host::call(host,"host-checkpoint.read",&json!({"requestId":i["requestId"]}));assert!(denied.is_err());
+      json!({"kind":"operation_input_preflight","status":"ready","requestDigest":p["requestDigest"],"material":{"effectiveSeed":"18446744073709551615","observed":p["input"]}})
     }else if p["kind"]=="operation_preflight"{
       let denied:Result<Value,_>=host::call(host,"host-http.execute",&json!({"plan":{"method":"GET","url":"http://127.0.0.1/forbidden","headers":[],"generatedHeaders":[],"body":{"kind":"none"},"sink":{"kind":"buffer","maxBytes":64},"timeoutMs":100},"credential":null}));assert!(denied.is_err());
       let denied:Result<String,_>=host::call(host,"host-media.create",&json!({"kind":"file","mimeHint":"application/octet-stream"}));assert!(denied.is_err());
@@ -131,6 +178,7 @@ impl Adapter for Guest{fn invoke(request:Invocation,host:&mut dyn Host)->Respons
   },
   "upload"=>{let stat:Value=host::call(host,"host-media.info",&json!({"handle":p["media"]["handle"]})).unwrap();assert_eq!(stat["fileName"],p["media"]["fileName"]);let bytes:Vec<u8>=host::call(host,"host-media.read",&json!({"handle":p["media"]["handle"],"offset":"0","maxBytes":8})).unwrap();assert!(!bytes.is_empty());http(host,&p["configuration"],"/upload",json!({"kind":"media","handle":p["media"]["handle"]}));json!({"mediaId":p["media"]["id"],"uploadRef":"uploaded-source"})},
   "submit"=>{
+   if p["operationId"]=="local.six/prepared" {assert_eq!(p["preparation"]["material"]["observed"],p["input"]);assert_eq!(p["preparation"]["material"]["effectiveSeed"],"18446744073709551615");}
    let remote=http(host,&p["configuration"],"/submit",json!({"kind":"bytes","bytes":p.to_string().into_bytes()}));
    if p["input"]["prompt"]=="lose-response" {panic!("simulated guest crash after real remote acceptance");}
    let checkpoint:Value=host::call(host,"host-checkpoint.read",&json!({"requestId":i["requestId"]})).unwrap();
@@ -160,7 +208,9 @@ bgx_adapter_v2_sdk::export_adapter!(Guest);
         build(source.path(),&["generate-lockfile","--offline"]);
         let make=|label:&str|{fs::write(source.path().join("src/lib.rs"),guest.replace("ADAPTER_LABEL",label)).unwrap();build(source.path(),&["build","--release","--locked","--offline","--target","wasm32-wasip2"]);
             let root=tempfile::tempdir().unwrap();let artifact=fs::read(source.path().join("target/wasm32-wasip2/release/six_operation_guest.wasm")).unwrap();fs::write(root.path().join("adapter.wasm"),&artifact).unwrap();
-            let manifest=json!({"schemaVersion":2,"pluginId":"local.six","displayName":label,"version":"1.0.0","protocolRange":{"min":2,"max":2},"requiredFeatures":["stream-events-v1","operation-preflight-v1"],"optionalFeatures":[],"language":"rust","entry":"adapter.wasm","artifactSha256":hash_bytes(&artifact),"publisherId":null,"publisherKeyId":null,"requestedCapabilities":{"endpointPolicy":["userConfigurable","allowPrivateNetwork"],"networkHosts":[],"allowPrivateNetwork":true,"auth":["bearer","hmac-sha256"],"mediaSlots":["image","file"],"stateBytes":1024,"embeddedHeaders":[]},"limits":{"memoryBytes":67108864,"fuel":1000000000,"wallMs":5000,"outputBytes":1048576}});let bytes=serde_json::to_vec(&manifest).unwrap();fs::write(root.path().join("manifest.json"),&bytes).unwrap();fs::write(root.path().join("manifest.sha256"),format!("{} adapter.wasm\n{} manifest.json\n",hash_bytes(&artifact),hash_bytes(&bytes))).unwrap();root};
+            let mut features=vec!["stream-events-v1","operation-preflight-v1","operation-input-preflight-v2"];
+            if label=="adapter-a" { features.push("websocket-v1"); }
+            let manifest=json!({"schemaVersion":2,"pluginId":"local.six","displayName":label,"version":"1.0.0","protocolRange":{"min":2,"max":2},"requiredFeatures":features,"optionalFeatures":[],"language":"rust","entry":"adapter.wasm","artifactSha256":hash_bytes(&artifact),"publisherId":null,"publisherKeyId":null,"requestedCapabilities":{"endpointPolicy":["userConfigurable","allowPrivateNetwork"],"networkHosts":[],"allowPrivateNetwork":true,"auth":["bearer","hmac-sha256"],"mediaSlots":["image","file"],"stateBytes":1024,"embeddedHeaders":[]},"limits":{"memoryBytes":67108864,"fuel":1000000000,"wallMs":5000,"outputBytes":1048576}});let bytes=serde_json::to_vec(&manifest).unwrap();fs::write(root.path().join("manifest.json"),&bytes).unwrap();fs::write(root.path().join("manifest.sha256"),format!("{} adapter.wasm\n{} manifest.json\n",hash_bytes(&artifact),hash_bytes(&bytes))).unwrap();root};
         let package_a=make("adapter-a");let package_b=make("adapter-b");Fixture{_source:source,package_a,package_b,sdk}
     })
 }
@@ -202,7 +252,9 @@ fn config(workspace: DevelopmentWorkspace, origin: &str, fixture: &Fixture) -> R
 fn fixture_trust() -> TrustContext {
     let mut trust = TrustContext::default();
     trust.supported_features.insert("stream-events-v1".into());
+    trust.supported_features.insert("websocket-v1".into());
     trust.supported_features.insert("operation-preflight-v1".into());
+    trust.supported_features.insert("operation-input-preflight-v2".into());
     trust.supported_features.insert("submission-resolution-v1".into());
     trust
 }
@@ -238,6 +290,83 @@ fn task(reference: &CapabilityRef, origin: &str) -> Value {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn websocket_round_trip_uses_scoped_credentials_and_releases_failed_connections() {
+    use futures_util::{SinkExt, StreamExt};
+    use tokio_tungstenite::{accept_hdr_async, tungstenite::{handshake::server::{Request, Response}, Message}};
+
+    let f = fixture();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let origin = format!("http://{}", listener.local_addr().unwrap());
+    let (cancel_ready, cancel_started) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(async move {
+        let accept = async || {
+            let (connection, _) = listener.accept().await.unwrap();
+            accept_hdr_async(connection, |request: &Request, response: Response| {
+                assert_eq!(request.uri().path(), "/socket");
+                assert_eq!(request.headers()["authorization"].to_str().unwrap(), format!("Bearer {KEY}"));
+                Ok(response)
+            }).await.unwrap()
+        };
+        let mut echo = accept().await;
+        for expected in [Message::Text("hello".into()), Message::Binary(vec![0, 255, 73].into())] {
+            let frame = echo.next().await.unwrap().unwrap();
+            assert_eq!(frame, expected);
+            echo.send(frame).await.unwrap();
+        }
+        assert!(matches!(echo.next().await, Some(Ok(Message::Close(_)))));
+        drop(echo);
+        drop(accept().await);
+        let mut interrupted = accept().await;
+        cancel_ready.send(()).unwrap();
+        let disconnect = timeout(Duration::from_secs(5), interrupted.next()).await.unwrap();
+        assert!(matches!(disconnect, None | Some(Err(_)) | Some(Ok(Message::Close(_)))));
+    });
+    let directory = tempfile::tempdir().unwrap();
+    let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
+    let host = make_host(workspace, &origin, f.package_a.path());
+    host.invoke(invocation("capabilities", "ws-caps", json!({}), "generic"), None, None, control(), None).await.unwrap();
+    let reference = host.catalog().unwrap().into_iter().find(|row| row.reference.operation_id == "local.six/async").unwrap().reference;
+    let probe = json!({"schemaVersion":2,"kind":"connectivity","configuration":{"endpointBaseUrl":origin,"credentialRef":"stable-credential"}});
+
+    let restricted_directory = tempfile::tempdir().unwrap();
+    let restricted_workspace = DevelopmentWorkspace::create(restricted_directory.path()).unwrap();
+    let restricted = make_host(restricted_workspace, &origin, f.package_b.path());
+    restricted.invoke(invocation("capabilities", "ws-caps-denied", json!({}), "generic"), None, None, control(), None).await.unwrap();
+    let restricted_reference = restricted.catalog().unwrap().into_iter().find(|row| row.reference.operation_id == "local.six/async").unwrap().reference;
+    let denied = restricted.invoke(invocation("probe", "ws-feature-denied", probe.clone(), "video"), Some(restricted_reference), None, control(), None).await.unwrap();
+    assert_eq!(data(&denied.response)["connection"], "not_checked");
+    restricted.wait_idle().await.unwrap();
+
+    for request in ["ws-roundtrip", "ws-disconnect"] {
+        let receipt = host.invoke(invocation("probe", request, probe.clone(), "video"), Some(reference.clone()), None, control(), None).await.unwrap();
+        assert_eq!(data(&receipt.response)["connection"], "ready");
+    }
+    let lifetime = control();
+    let mut probe_task = {
+        let host = host.clone();
+        let lifetime = lifetime.clone();
+        tokio::spawn(async move {
+            host.invoke(invocation("probe", "ws-cancel", probe, "video"), Some(reference), None, lifetime, None).await
+        })
+    };
+    tokio::select! {
+        ready = timeout(Duration::from_secs(20), cancel_started) => ready.unwrap().unwrap(),
+        early = &mut probe_task => match early.unwrap() {
+            Ok(receipt) => panic!("WebSocket invocation finished before reaching the server: {:?}", receipt.response),
+            Err(error) => panic!("WebSocket invocation failed before reaching the server: {error}"),
+        },
+    }
+    lifetime.cancel();
+    let cancelled = timeout(Duration::from_secs(10), probe_task).await.unwrap().unwrap();
+    match cancelled {
+        Ok(receipt) => assert!(receipt.cancellation.is_some()),
+        Err(error) => assert_eq!(error.code, "CANCELLED"),
+    }
+    host.wait_idle().await.unwrap();
+    server.await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn operation_preflight_runs_through_worker_without_network_or_media_side_effects() {
     let f = fixture();
     let (origin, calls, server) = server().await;
@@ -256,6 +385,66 @@ async fn operation_preflight_runs_through_worker_without_network_or_media_side_e
     let result = host.invoke(invocation("probe", "operation-preflight", request, "video"), Some(reference), None, control(), None).await.unwrap();
     assert_eq!(data(&result.response)["status"], "ready");
     assert_eq!(*calls.lock().unwrap(), before);
+    host.wait_idle().await.unwrap();
+    server.abort();
+}
+
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn generic_preflight_freezes_input_and_material_before_any_submit() {
+    use bgx_adapter_v2_validator::operation_input::{request_digest, seal_result};
+
+    let f = fixture();
+    let (origin, calls, server) = server().await;
+    let directory = tempfile::tempdir().unwrap();
+    let workspace = DevelopmentWorkspace::create(directory.path()).unwrap();
+    let host = make_host(workspace.clone(), &origin, f.package_a.path());
+    host.invoke(invocation("capabilities", "generic-caps", json!({}), "generic"), None, None, control(), None).await.unwrap();
+    let selected = host.catalog().unwrap().into_iter()
+        .find(|entry| entry.reference.operation_id == "local.six/prepared").unwrap().reference;
+    let mut payload = submit(&selected, &origin);
+    payload["input"]["strength"] = json!(0.375);
+    let mut prepare = json!({
+        "schemaVersion":2,"kind":"operation_input_preflight","selection":selected,
+        "configuration":payload["configuration"],"environment":{"revisionDigest":"e".repeat(64),"ready":true},
+        "input":payload["input"],"mediaMetadata":[]
+    });
+    prepare["requestDigest"] = json!(request_digest(&prepare).unwrap());
+    let result = host.invoke(
+        invocation("probe", "generic-prepare", prepare.clone(), "generic"),
+        Some(selected.clone()), None, control(), None,
+    ).await.unwrap();
+    let ready = data(&result.response);
+    assert_eq!(ready["material"]["observed"], payload["input"]);
+    assert!(calls.lock().unwrap().is_empty());
+    let preparation = seal_result(&prepare, &ready).unwrap().unwrap();
+    payload["environmentRevisionDigest"] = prepare["environment"]["revisionDigest"].clone();
+    host.wait_idle().await.unwrap();
+    drop(host);
+
+    let host = make_host(workspace, &origin, f.package_a.path());
+    host.invoke(invocation("capabilities", "generic-caps-reopen", json!({}), "generic"), None, None, control(), None).await.unwrap();
+    for (name, invalid) in [
+        ("missing", payload.clone()),
+        ("stale-input", { let mut value = payload.clone(); value["preparation"] = preparation.clone(); value["input"]["strength"] = json!(0.5); value }),
+        ("stale-material", { let mut value = payload.clone(); value["preparation"] = preparation.clone(); value["preparation"]["material"]["effectiveSeed"] = json!("0"); value }),
+        ("stale-environment", { let mut value = payload.clone(); value["preparation"] = preparation.clone(); value["environmentRevisionDigest"] = json!("f".repeat(64)); value }),
+    ] {
+        let error = host.invoke(
+            invocation("submit", name, invalid, "generic"),
+            Some(selected.clone()), None, control(), None,
+        ).await.err().expect("stale preparation");
+        assert_eq!(error.code, "PREPARATION_STALE");
+    }
+    assert!(calls.lock().unwrap().is_empty());
+
+    payload["preparation"] = preparation;
+    let response = host.invoke(
+        invocation("submit", "generic-submit", payload, "generic"),
+        Some(selected), None, control(), None,
+    ).await.unwrap();
+    assert_eq!(data(&response.response)["kind"], "completed");
+    assert_eq!(*calls.lock().unwrap(), BTreeMap::from([("/submit".into(), 1)]));
     host.wait_idle().await.unwrap();
     server.abort();
 }
@@ -324,6 +513,60 @@ async fn lost_submit_reply_resolves_through_real_probe_worker_without_another_su
             .query_row("SELECT frozen FROM checkpoint_fixture WHERE request_id='lost-original'", [], |r| r.get(0)).unwrap()
     };
     let frozen_before = frozen_bytes();
+    drop(store);
+    // A separately verified package can observe the original remote task under
+    // review without opening a checkpoint session or gaining a submit permit.
+    let imported = bgx_adapter_v2_reference_host::imported_query::ImportedQuery {
+        original_checkpoint: checkpoint.clone(),
+        original_frozen: serde_json::from_slice(&frozen_before).unwrap(),
+        original_account_id: "original-account".into(),
+        current_account_id: "original-account".into(),
+        review: serde_json::from_value(json!({
+            "schemaVersion":1,"authority":"operatorReviewed","reviewedBy":"fixture-reviewer",
+            "originalRequestId":"lost-original","originalRequestDigest":checkpoint["requestDigest"],
+            "accountId":"original-account","vendorTaskId":"real-job-one","resumeToken":null,
+            "evidence":[{"reference":"fixture-billing-receipt","sha256":hash_bytes(b"original remote acceptance")}]
+        })).unwrap(),
+    };
+    let make_review_host = || {
+        let package = LoadedPackage::load(f.package_b.path(), &fixture_trust()).unwrap();
+        assert_ne!(serde_json::to_value(package.verified().identity()).unwrap(), checkpoint["package"]);
+        let binding = Binding::new("binding".into(), package.verified(), 1,
+            json!({"endpointBaseUrl":origin,"credentialRef":"none"})).unwrap();
+        ReferenceHost::new(config(workspace.clone(), &origin, f), package, binding).unwrap()
+    };
+    let mut wrong_account = imported.clone();
+    wrong_account.current_account_id = "other-account".into();
+    assert!(make_review_host().with_imported_query(wrong_account).is_err());
+    let review_host = make_review_host().with_imported_query(imported).unwrap();
+    review_host.invoke(invocation("capabilities", "review-caps", json!({}), "generic"),
+        None, None, control(), None).await.unwrap();
+    let review_reference = review_host.catalog().unwrap().into_iter()
+        .find(|c| c.reference.operation_id == "local.six/async").unwrap().reference;
+    let mut reviewed_task = task(&review_reference, &origin);
+    reviewed_task["configuration"]["credentialRef"] = json!("none");
+    let mut wrong_task = reviewed_task.clone();
+    wrong_task["vendorTaskId"] = json!("not-the-reviewed-vendor-id");
+    for (op, req, payload, root) in [
+        ("query", "wrong-vendor", wrong_task, "lost-original"),
+        ("query", "wrong-original", reviewed_task.clone(), "different-original"),
+        ("cancel", "forbidden-cancel", reviewed_task.clone(), "lost-original"),
+        ("submit", "forbidden-submit", submit(&review_reference,&origin), "lost-original"),
+    ] {
+        let result = review_host.invoke(invocation(op, req, payload, "video"),
+            None, Some(root.into()), control(), None).await;
+        assert_eq!(result.err().unwrap().code, "PERMISSION_DENIED", "{req}");
+    }
+    assert_eq!(*calls.lock().unwrap(), BTreeMap::from([("/submit".into(), 1)]));
+    let receipt = review_host.invoke(invocation("query", "review-original", reviewed_task, "video"),
+        None, Some("lost-original".into()), control(), None).await.unwrap();
+    assert_eq!(data(&receipt.response)["status"], "succeeded");
+    review_host.wait_idle().await.unwrap();
+    drop(review_host);
+    assert_eq!(calls.lock().unwrap().get("/query"), Some(&1));
+    let store = CheckpointStore::open(&workspace, SnapshotPolicy::new(vec![]).unwrap()).unwrap();
+    assert_eq!(store.read("lost-original", "lost-original").unwrap().unwrap(), checkpoint);
+    assert_eq!(frozen_bytes(), frozen_before);
     drop(store);
     server.abort();
     server.await.unwrap_err();
@@ -480,7 +723,7 @@ async fn six_operations_sync_async_generic_and_second_adapter_run_through_real_w
     )
     .await
     .unwrap();
-    assert_eq!(host.catalog().unwrap().len(), 3);
+    assert_eq!(host.catalog().unwrap().len(), 4);
     host.invoke(
         invocation("capabilities", "caps-refresh", json!({}), "generic"),
         None,

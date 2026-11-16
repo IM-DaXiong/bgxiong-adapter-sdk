@@ -87,3 +87,29 @@ fn legacy_probe_inputs_remain_closed_and_distinct() {
     input["mediaMetadata"][0]["handle"] = json!("local-file-handle");
     assert!(registry.validate_dispatch("probe", "input", &input).is_err());
 }
+
+#[test]
+fn generic_wire_examples_round_trip_and_bind_results() {
+    use bgx_adapter_v2_sdk::{OperationInputV1Draft, OperationInputV1Request};
+    use bgx_adapter_v2_validator::operation_input;
+
+    let example: Value = serde_json::from_str(include_str!("../../../profiles/operation-input-v1/examples.json")).unwrap();
+    let draft: OperationInputV1Draft = serde_json::from_value(example["draft"].clone()).unwrap();
+    let request: OperationInputV1Request = serde_json::from_value(example["request"].clone()).unwrap();
+    assert_eq!(serde_json::to_value(draft).unwrap(), example["draft"]);
+    assert_eq!(serde_json::to_value(request).unwrap(), example["request"]);
+
+    let registry = SchemaRegistry::public().unwrap();
+    registry.validate_dispatch("probe", "input", &example["request"]).unwrap();
+    for result in [&example["ready"], &example["rejected"]] {
+        registry.validate_dispatch("probe", "result", result).unwrap();
+        operation_input::validate_result(&example["request"], result).unwrap();
+    }
+    let prepared = operation_input::seal_result(&example["request"], &example["ready"]).unwrap().unwrap();
+    assert_eq!(prepared["material"]["effectiveSeed"], example["draft"]["input"]["seed"]);
+    assert!(operation_input::seal_result(&example["request"], &example["rejected"]).unwrap().is_none());
+
+    let mut changed = example["request"].clone();
+    changed["input"]["motion"]["keepAudio"] = json!(true);
+    assert_eq!(operation_input::validate_result(&changed, &example["ready"]).unwrap_err().code, "PREPARATION_STALE");
+}

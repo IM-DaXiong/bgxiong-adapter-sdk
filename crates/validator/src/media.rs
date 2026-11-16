@@ -76,7 +76,10 @@ pub fn validate_references(context: &ValidatedOperationInput) -> Result<(), Cont
 }
 
 /// Declared media slots against one operation input; `media` maps media ID to its `{kind}` record.
-pub(crate) fn validate_slot_references(input: &Value, slots: &Value, media: &BTreeMap<&str, &Value>) -> Result<(), ContractError> {
+pub(crate) fn validate_slot_references<'a>(
+    input: &'a Value, slots: &Value, media: &BTreeMap<&str, &Value>,
+) -> Result<BTreeSet<&'a str>, ContractError> {
+    let mut used = BTreeSet::new();
     let slots = slots.as_array().ok_or_else(|| ContractError::new("INVALID_PACKAGE", "/mediaSlots", "media slots must be an array"))?;
     for slot in slots {
         let pointer = slot["inputPointer"].as_str().unwrap_or("");
@@ -99,9 +102,10 @@ pub(crate) fn validate_slot_references(input: &Value, slots: &Value, media: &BTr
                 || media.get(id).is_none_or(|m| m["kind"] != slot["mediaKind"]) {
                 return Err(ContractError::new("INVALID_INPUT", pointer, "duplicate, dangling or wrong-kind media reference"));
             }
+            used.insert(id);
         }
     }
-    Ok(())
+    Ok(used)
 }
 
 pub fn validate_host_media(context: &ValidatedOperationInput, host: &MediaValidationContext) -> Result<(), ContractError> {

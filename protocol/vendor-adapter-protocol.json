@@ -213,6 +213,15 @@
       "EOF": "repeatable until explicit close",
       "failure": "remove live stream, close connection, explicit error; never EOF or automatic retry",
       "parsing": "opaque bytes; content protocol parsing belongs to adapter"
+    },
+    "websocket": {
+      "feature": "websocket-v1",
+      "endpoint": "ws/wss maps to the corresponding exact HTTP origin for policy, DNS pinning and credential authorization",
+      "messageBudget": "schema-policy.json#/limits/maxWebSocketMessageBytes",
+      "connectionBudget": "schema-policy.json#/limits/maxWebSocketConnections",
+      "readTimeoutMsZero": "wait within the current invocation deadline; a positive local read timeout returns idle and preserves the connection",
+      "cleanup": "close, failure and cancellation release the invocation-owned socket without reconnecting"
     }
-  }
+  },
+  "operationInputProfile": "../profiles/operation-input-v1/README.en.md"
 }

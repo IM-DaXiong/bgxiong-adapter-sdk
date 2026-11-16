@@ -235,6 +235,10 @@ impl Runtime {
                 .expect("feature catalog");
         let mut required_features = std::collections::BTreeMap::new();
         for feature in catalog["features"].as_array().unwrap() {
+            // The broker gates features declared outside the frozen Invocation enum.
+            if feature["invocationFeature"] == false {
+                continue;
+            }
             for interface in feature["requiredImports"].as_array().unwrap() {
                 required_features.insert(
                     interface.as_str().unwrap().into(),
@@ -367,8 +371,10 @@ impl Runtime {
                     .map(|v| v.as_str().unwrap().to_owned())
                     .collect(),
                 metadata_only: wire["operation"] == "probe"
-                    && serde_json::from_str::<Value>(&request.r#payload_json)
-                        .map_err(|_| RuntimeFault::new("INVALID_INPUT", "Invalid probe JSON"))?["kind"] == "operation_preflight",
+                    && bgx_adapter_v2_ports::wire::is_metadata_only_probe(
+                        &serde_json::from_str::<Value>(&request.r#payload_json)
+                            .map_err(|_| RuntimeFault::new("INVALID_INPUT", "Invalid probe JSON"))?,
+                    ),
                 offline,
             },
         );
@@ -624,7 +630,7 @@ impl Runtime {
             for (function, method, result_type) in functions {
                 let model = self.model.clone();
                 let feature = self.required_features.get(&interface_name).cloned();
-                let network = interface_name == "host-http" || interface_name == "host-http-stream";
+                let network = matches!(interface_name.as_str(), "host-http" | "host-http-stream" | "host-websocket");
                 instance
                     .func_new(&function, move |mut store, _signature, params, results| {
                         let clock = store.data().clock.clone();
@@ -650,7 +656,7 @@ impl Runtime {
                                 .is_some_and(|f| !store.data().features.contains(f))
                             {
                                 Err(bgx_adapter_v2_ports::wire::host::invalid_wire(
-                                    "Required stream feature was not negotiated",
+                                    "Required host port feature was not negotiated",
                                 ))
                             } else {
                                 store.data_mut().host.call(call)

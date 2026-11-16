@@ -94,6 +94,7 @@ impl CapabilityRegistry {
                 let id = operation["id"].as_str().unwrap();
                 let version = operation["version"].as_u64().unwrap();
                 validate_operation_namespace(package.namespace(), id)?;
+                crate::operation_input::validate_declaration(package, operation)?;
                 let signature = json!([operation["inputSchema"]["digest"], operation["outputSchema"]["digest"],
                     operation["resumeSchema"].get("digest")]);
                 let key = (id.to_owned(), version);

@@ -258,6 +258,10 @@
               ],
               "additionalProperties": false
             }
+          },
+          "inputProfile": {
+            "const": "operation-input-v1",
+            "description": "This operation requires operation-input-preflight-v2."
           }
         },
         "required": [
