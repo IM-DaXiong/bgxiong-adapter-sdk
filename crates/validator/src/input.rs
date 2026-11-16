@@ -84,7 +84,7 @@ fn required_controls(
             continue;
         }
         let field = registry.input_field_schema(id, &pointer)?;
-        if field.get("const").is_some() {
+        if field.get("const").is_some() || field["readOnly"] == true {
             continue;
         }
         if accepts_type(&field, "object") && field.get("properties").is_some() {
@@ -209,11 +209,23 @@ pub fn ui_diagnostics(contract: &CapabilityContractV2) -> Vec<ContractError> {
         .filter_map(|op| validate_controls(&r, op).err()).collect()
 }
 fn validate_controls(r: &SchemaRegistry, op: &Value) -> Result<(), ContractError> {
-    let schema = r.schema(op["inputSchema"]["id"].as_str().unwrap()).unwrap();
+    let id = op["inputSchema"]["id"].as_str().unwrap();
+    let schema = r.schema(id).unwrap();
         let mut pointers = std::collections::BTreeSet::new();
         for control in op["uiSchema"]["controls"].as_array().unwrap() {
             let pointer = control["fieldPointer"].as_str().unwrap();
-            let field = r.input_field_schema(op["inputSchema"]["id"].as_str().unwrap(), pointer)?;
+            let field = r.input_field_schema(id, pointer)?;
+            let mut read_only = field["readOnly"] == true;
+            for (end, _) in pointer.match_indices('/').skip(1) {
+                read_only |= r.input_field_schema(id, &pointer[..end])?["readOnly"] == true;
+            }
+            if read_only {
+                return Err(ContractError::new(
+                    "INVALID_PACKAGE",
+                    pointer,
+                    "read-only input cannot be supplied by an editable control",
+                ));
+            }
             if !pointers.insert(pointer.to_owned()) {
                 return Err(ContractError::new(
                     "INVALID_PACKAGE",
@@ -245,12 +257,12 @@ fn validate_controls(r: &SchemaRegistry, op: &Value) -> Result<(), ContractError
         }
         for slot in op["mediaSlots"].as_array().unwrap() {
             let pointer = slot["inputPointer"].as_str().unwrap();
-            r.input_field_schema(op["inputSchema"]["id"].as_str().unwrap(), pointer)?;
+            r.input_field_schema(id, pointer)?;
             pointers.insert(pointer.to_owned());
         }
         required_controls(
             r,
-            op["inputSchema"]["id"].as_str().unwrap(),
+            id,
             schema,
             "",
             &pointers,

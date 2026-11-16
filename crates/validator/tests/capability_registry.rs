@@ -244,12 +244,14 @@ fn operation_input_profile_uses_each_packages_schema_and_preserves_open_json() {
         let mut contract = serde_json::to_value(&contracts()[0]).unwrap();
         let schema = json!({
             "type":"object",
-            "required":["彩/色~","motion","options","kind"],
+            "required":["彩/色~","motion","options","kind","frozenSource"],
             "properties":{
                 "彩/色~":{"type":"string","enum":choices},
                 "motion":{"type":"object","properties":{"seconds":{"type":"number","minimum":0.25}},"required":["seconds"]},
                 "options":{"type":"array","items":{"type":"object","properties":{"enabled":{"type":"boolean"}}}},
-                "kind":{"const":"workflow-native"}
+                "kind":{"const":"workflow-native"},
+                "frozenSource":{"type":"object","readOnly":true,"required":["digest"],
+                    "properties":{"digest":{"type":"string"}},"additionalProperties":false}
             },
             "additionalProperties":false
         }).to_string();
@@ -285,11 +287,23 @@ fn operation_input_profile_uses_each_packages_schema_and_preserves_open_json() {
         "schemaVersion":2,"kind":"operation_input_preflight",
         "selection":a_ref,"configuration":configuration,
         "environment":{"revisionDigest":"e".repeat(64),"ready":true},
-        "input":{"彩/色~":"柔和","motion":{"seconds":0.75},"options":[{"enabled":false}],"kind":"workflow-native"},
+        "input":{"彩/色~":"柔和","motion":{"seconds":0.75},"options":[{"enabled":false}],"kind":"workflow-native",
+            "frozenSource":{"digest":"frozen-source-receipt"}},
         "mediaMetadata":[]
     });
     request["requestDigest"] = json!(operation_input::request_digest(&request).unwrap());
     operation_input::validate_request(&catalog, a_ref, &binding, &request).unwrap();
+
+    let mut absent = request.clone();
+    absent["input"].as_object_mut().unwrap().remove("frozenSource");
+    absent["requestDigest"] = json!(operation_input::request_digest(&absent).unwrap());
+    assert!(operation_input::validate_request(&catalog, a_ref, &binding, &absent).is_err());
+    let mut editable = serde_json::to_value(&a).unwrap();
+    editable["operations"][0]["uiSchema"]["controls"].as_array_mut().unwrap().push(json!({
+        "fieldPointer":"/frozenSource/digest","widget":"text","label":"Source digest","description":"","group":""
+    }));
+    let invalid = bgx_adapter_v2_validator::validate_contract(&serde_json::from_value(editable).unwrap()).unwrap_err();
+    assert_eq!(invalid.path, "/frozenSource/digest");
 
     request["selection"] = json!(b_ref);
     request["requestDigest"] = json!(operation_input::request_digest(&request).unwrap());

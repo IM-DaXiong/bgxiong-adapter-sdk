@@ -4,6 +4,8 @@ Set `inputProfile` to `operation-input-v1` on the capability operation and decla
 
 Controls address the same input by RFC 6901 field pointer. A display role such as `prompt`, `size`, `aspectRatio`, `duration`, `frameRate`, or `seed` guides presentation. Unknown display roles use the declared widget. Control hints never change the value, unit or range. Media slots supply managed IDs with the carrier forms declared by the package schema. Transport budgets come from the SDK schema policy.
 
+Mark fields supplied by the host's frozen context with `readOnly: true`. The host supplies them from the corresponding application record before preparation. A read-only object covers its descendants, so editable controls for those paths are rejected. The complete input still satisfies the declared schema during preparation and submission, including all required read-only fields.
+
 Apply schema defaults only on creation of a draft. Schema constants can be instantiated when absent. Report conflicting values. Preserve absence, null, an empty string, zero, false and an empty array independently. Declare large integer identifiers as decimal strings when they exceed JSON safe-integer precision.
 
 Send the frozen selection, non-secret configuration, environment revision and readiness, input, and content identities in the feature's `probe` payload. The SDK computes the request digest as lowercase SHA-256 of canonical UTF-8 JSON without `requestDigest`. Object keys sort by Unicode code point; arrays keep their order with the sole exception of the metadata table sorted by media ID. Safe integer-valued numbers omit the fraction. Other numbers use the SDK's JSON serialization. Use the SDK helper when making or checking a digest.

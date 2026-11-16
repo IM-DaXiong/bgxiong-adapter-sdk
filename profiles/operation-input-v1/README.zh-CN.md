@@ -4,6 +4,8 @@
 
 控件用 RFC 6901 指针编辑同一个 input。`prompt`、`size`、`aspectRatio`、`duration`、`frameRate`、`seed` 等展示角色决定呈现，陌生角色使用声明的控件。字段的取值、单位和范围由包决定。素材槽按声明的载体形态装入受控素材 ID。资源预算见 SDK schema policy。
 
+宿主按冻结业务记录提供的字段用 `readOnly: true` 声明，在预检前装入实际输入。只读对象的下级字段也拒绝编辑控件。预检和提交照常核对完整输入 schema，包括所有必填的只读字段。
+
 草稿首次建立时可初始化 default。缺失的 const 可以初始化，冲突值显式拒绝。分别保留缺失、null、空串、0、false、空数组。超出 JSON 安全整数范围的整数标识使用十进制字符串。
 
 通过 `probe` 发送冻结的操作选择、非密配置、环境事实版本及就绪状态、input 与素材内容身份。SDK 按规范 UTF-8 JSON 计算小写 SHA-256，摘要排除 `requestDigest`。对象键按 Unicode 码点排序，数组保留顺序，素材元数据表例外并按素材 ID 排序。安全整数去掉小数部分，其它数值使用 SDK 的 JSON 编码。使用 SDK 的摘要函数生成或核验摘要。
