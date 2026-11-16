@@ -1159,7 +1159,7 @@
     {
       "source": "templates/rust/template-lock.json",
       "target": "templates/rust/template-lock.json",
-      "sha256": "4c9ca6c47222aecb1808836729a6122761f1330dd90c8b7ebd2e6897ffe8112a",
+      "sha256": "b0759f1f25ff0cae7f42beb6a6e2af355bc0f81afada372a05630142c6a8bb02",
       "required": true
     },
     {
@@ -1201,7 +1201,7 @@
     {
       "source": "templates/template-lock.json",
       "target": "templates/template-lock.json",
-      "sha256": "4c9ca6c47222aecb1808836729a6122761f1330dd90c8b7ebd2e6897ffe8112a",
+      "sha256": "b0759f1f25ff0cae7f42beb6a6e2af355bc0f81afada372a05630142c6a8bb02",
       "required": true
     },
     {
