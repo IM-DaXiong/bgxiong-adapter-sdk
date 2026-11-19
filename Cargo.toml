@@ -33,3 +33,17 @@ zeroize = "=1.9.1"
 futures-util = "=0.3.34"
 rusqlite = { version = "=0.39.0", features = ["bundled"] }
 minisign = "=0.10.0"
+
+# The worker compiles a guest component in each fresh process. Keep that compiler
+# optimized in development builds as well so local invocations can use normal budgets.
+[profile.dev.package.cranelift-codegen]
+opt-level = 2
+
+[profile.dev.package.wasmtime-internal-cranelift]
+opt-level = 2
+
+[profile.dev.package.wasmparser]
+opt-level = 2
+
+[profile.dev.package.regalloc2]
+opt-level = 2
