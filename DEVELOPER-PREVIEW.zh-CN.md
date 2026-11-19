@@ -1,5 +1,7 @@
 # ComfyUI 工作流作者开发包·开发者预览版
 
+当前主程序版本 **0.6.1119**，当前 sdkRelease **2.4.0**。下文安装发行 0.6.1030 是该预览包当时的记录。
+
 2026-10-29新增独立SDK 2.1.1全景候选，公开合同见[image-projection-v1](profiles/image-projection-v1/README.zh-CN.md)。这不是本页历史应用安装版升级；同步/异步中立CLI、数据恢复和旧包边界独立验收，真实模型画质、应用工作台和安装版仍由各自计划负责。协议2、WIT及author SDK 2.0.0保持不变；新增profile与native validator/reference-host/tools一起交付。
 
 安装发行0.6.1030；SDK合同2.0.0。安装包包含公开源码、固定CLI/worker、schema、模板和12套作者包。此版本面向愿意由编程智能体或开发者接入自有工作流的用户；不是任意工作流自动转换器，也不是全SDK正式就绪声明。

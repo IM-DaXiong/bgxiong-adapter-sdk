@@ -73,8 +73,8 @@ pwsh -File .\tools\build_sdk.ps1 -Profile debug -OutputDirectory <absolute-new-d
 
 当前公开状态以 [预览版说明](DEVELOPER-PREVIEW.zh-CN.md) 和 [RELEASE-STATUS.json](RELEASE-STATUS.json) 为准，不要把规划或局部候选写成已经完成的正式发行。
 
-- 协议、WIT 与 author SDK 身份仍为 **2.0.0**。`RELEASE-STATUS.json` 中的 `sdkRelease` 现为 **2.1.3**，对应工具、profile 与参考宿主等增量；这不是完整 SDK 治理通过。
-- 当前交付定位为 **ComfyUI 工作流作者开发包·开发者预览版**。应用安装发行记录为 **0.6.1030**。`developerPreview` 单独记录这次有限交付。
+- 协议、WIT 与 author SDK 身份仍为 **2.0.0**。`release-manifest.json` 与 `RELEASE-STATUS.json` 的 `sdkRelease` 现为 **2.4.0**，对应工具、profile 与参考宿主等增量；这不是完整 SDK 治理通过。
+- 当前主程序版本为 **0.6.1119**。交付定位仍是 **ComfyUI 工作流作者开发包·开发者预览版**。`developerPreview.installationVersion` 保留 **0.6.1030**，只记录那次有限预览，不是当前安装版。
 - 当前接入范围是已声明输入输出原语内的图片生成、视频生成和视频编辑。图片、视频生成的已验入口以自由画布工作台及各样例 README 为准；视频编辑以 Wan 样例为准。SDK 通用 schema 不意味着每个产品表单支持任意根字段或媒体组合。模型、节点、素材、鉴权和尺寸/时长要求由具体工作流材料说明。普通工作流能直接用现有工作流管理接入时，优先复用现有管理能力。
 - `RELEASE-STATUS.json` 的 `scope` 明确：旧 G00—G06、`sdkReady=false`、`moduleIntegration` 等字段属于独立 SDK 完整候选治理，不是当前应用功能否定清单。尚未完成的完整 SDK 验收仍保持未验。v1 厂商插件原有接口继续见安装目录 `user-examples/vendor-adapter-v1/`；本预览版不承诺所有厂商或业务槽已接入 v2。
 - SDK 制作和验证在独立 workspace 或参考宿主完成，不修改主程序构建、安装组件和用户数据；通过独立验收后，各模块再按自己的准备程度接入。未接入模块继续原有完整实现；已接入模块不设置失败回退或旧字段兼容。`SDK_READY` 不等于主程序已支持 v2。

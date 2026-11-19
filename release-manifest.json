@@ -73,7 +73,7 @@
     {
       "source": "DEVELOPER-PREVIEW.zh-CN.md",
       "target": "DEVELOPER-PREVIEW.zh-CN.md",
-      "sha256": "8aed883e63e3c9e11ee4b1f9a47aea9af933709d7e005c1795c42b317f70a11b",
+      "sha256": "5357b4ad84008f86d8b14401137d2642f61b14d634c49923485643627a9a5629",
       "required": true
     },
     {
@@ -103,7 +103,7 @@
     {
       "source": "README.md",
       "target": "README.md",
-      "sha256": "200763da6dfc8ac870b02d6fe5eb1dd3394692fda58a05ac9589c11251e8ca6b",
+      "sha256": "621cb47200daaec019c145049522fea56dcf5d66e0ba03f87cf5a66db6419125",
       "required": true
     },
     {
