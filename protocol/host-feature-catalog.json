@@ -60,6 +60,12 @@
       "semantics": "Metadata-only preflight bound to the selected package, operation, configuration, environment and unmodified JSON input. The package supplies diagnostics and opaque preparation material."
     },
     {
+      "id": "synchronous-http-wait-v1",
+      "requiredImports": ["host-http"],
+      "invocationFeature": false,
+      "semantics": "For a verified synchronous submit, an HTTP POST with timeoutMs zero may pause the local processing deadline while awaiting its remote response. Cancellation, network authorization and transport failures remain active. The request is never retried by the broker."
+    },
+    {
       "id": "websocket-v1",
       "requiredImports": [
         "host-websocket"

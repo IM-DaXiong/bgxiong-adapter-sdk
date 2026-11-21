@@ -457,15 +457,13 @@ impl Runtime {
             if let Some(fault) = e.downcast_ref::<RuntimeFault>() {
                 return fault.clone();
             }
-            let code = if matches!(
+            if matches!(
                 e.downcast_ref::<wasmtime::Trap>(),
                 Some(wasmtime::Trap::OutOfFuel)
             ) {
-                "TIMEOUT"
-            } else {
-                "INVALID_PACKAGE"
-            };
-            RuntimeFault::new(code, e.to_string())
+                return RuntimeFault::new("RESOURCE_UNAVAILABLE", "Guest instruction budget exhausted");
+            }
+            RuntimeFault::new("INVALID_PACKAGE", e.to_string())
         })
     }
 

@@ -17,12 +17,12 @@ use std::{
     pin::Pin,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, Mutex,
     },
-    time::Instant,
+    time::{Duration, Instant},
 };
 use tokio::{
-    sync::{mpsc, oneshot, Notify},
+    sync::{mpsc, oneshot, watch, Notify},
     time::{sleep_until, timeout, Instant as TokioInstant},
 };
 use tokio_util::sync::CancellationToken;
@@ -31,13 +31,56 @@ use tokio_util::sync::CancellationToken;
 pub struct Control {
     cancel: CancellationToken,
     pub deadline: Option<Instant>,
+    local_budget: Option<Arc<LocalBudget>>,
+}
+struct LocalBudget {
+    deadline: watch::Sender<Option<Instant>>,
+    remaining: Mutex<Option<Duration>>,
+}
+pub struct RemoteWait(Arc<LocalBudget>);
+impl Drop for RemoteWait {
+    fn drop(&mut self) {
+        let mut remaining = self.0.remaining.lock().expect("local budget");
+        if let Some(duration) = remaining.take() {
+            self.0.deadline.send_replace(Some(Instant::now() + duration));
+        }
+    }
 }
 impl Control {
     pub fn new(deadline: Option<Instant>) -> Self {
         Self {
             cancel: CancellationToken::new(),
             deadline,
+            local_budget: None,
         }
+    }
+    /// Bounds local processing time while allowing a verified managed HTTP call
+    /// to pause that clock during a remote response wait.
+    pub fn with_local_deadline(deadline: Instant) -> Self {
+        Self {
+            local_budget: Some(Arc::new(LocalBudget {
+                deadline: watch::channel(Some(deadline)).0,
+                remaining: Mutex::new(None),
+            })),
+            ..Self::new(None)
+        }
+    }
+    pub fn pause_local_budget(&self) -> Option<RemoteWait> {
+        let budget = self.local_budget.as_ref()?;
+        let mut remaining = budget.remaining.lock().expect("local budget");
+        let deadline = (*budget.deadline.borrow())?;
+        let duration = deadline.saturating_duration_since(Instant::now());
+        if duration.is_zero() {
+            return None;
+        }
+        *remaining = Some(duration);
+        budget.deadline.send_replace(None);
+        Some(RemoteWait(budget.clone()))
+    }
+    pub fn effective_deadline(&self) -> Option<Instant> {
+        self.deadline.into_iter()
+            .chain(self.local_budget.as_ref().and_then(|budget| *budget.deadline.borrow()))
+            .min()
     }
     pub fn cancel(&self) {
         self.cancel.cancel();
@@ -45,7 +88,7 @@ impl Control {
     /// Nested probes inherit cancellation/deadline, but their cleanup cannot
     /// cancel the owning submission after a successful preflight.
     pub fn child(&self) -> Self {
-        Self { cancel: self.cancel.child_token(), deadline: self.deadline }
+        Self { cancel: self.cancel.child_token(), ..self.clone() }
     }
     pub fn is_cancelled(&self) -> bool {
         self.cancel.is_cancelled()
@@ -54,10 +97,24 @@ impl Control {
         self.cancel.cancelled().await
     }
     pub async fn expired(&self) {
-        match self.deadline {
-            Some(at) => sleep_until(TokioInstant::from_std(at)).await,
-            None => std::future::pending().await,
+        let wait = |at| async move {
+            match at {
+                Some(at) => sleep_until(TokioInstant::from_std(at)).await,
+                None => std::future::pending().await,
+            }
+        };
+        if let Some(budget) = &self.local_budget {
+            let mut changes = budget.deadline.subscribe();
+            loop {
+                let deadline = self.deadline.into_iter().chain(*changes.borrow_and_update()).min();
+                tokio::select! {
+                    biased;
+                    _ = changes.changed() => {},
+                    _ = wait(deadline) => return,
+                }
+            }
         }
+        wait(self.deadline).await;
     }
 }
 pub type PortFuture<'a> = Pin<Box<dyn Future<Output = Result<Value, HostError>> + Send + 'a>>;
@@ -164,7 +221,7 @@ impl WorkerClient {
                 "Local invocation cancelled before start",
             ));
         }
-        if control.deadline.is_some_and(|d| Instant::now() >= d) {
+        if control.effective_deadline().is_some_and(|d| Instant::now() >= d) {
             return Err(Fault::new(
                 FaultKind::Deadline,
                 "Host request deadline expired before start",

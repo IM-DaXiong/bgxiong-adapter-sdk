@@ -56,7 +56,7 @@ fn check(control: &Control) -> Result<()> {
     if control.is_cancelled() {
         return Err(error("CANCELLED", "Local media operation was cancelled"));
     }
-    if control.deadline.is_some_and(|d| Instant::now() >= d) {
+    if control.effective_deadline().is_some_and(|d| Instant::now() >= d) {
         return Err(error("TIMEOUT", "Media request deadline exhausted"));
     }
     Ok(())

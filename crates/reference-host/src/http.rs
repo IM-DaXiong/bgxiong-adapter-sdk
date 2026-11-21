@@ -21,6 +21,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub const SYNCHRONOUS_WAIT_FEATURE: &str = "synchronous-http-wait-v1";
+
 #[derive(Clone)]
 pub struct MediaAccess {
     pub broker: Arc<Mutex<MediaBroker>>,
@@ -104,6 +106,7 @@ impl MediaAccess {
 pub struct OpenedHttp {
     pub response: reqwest::Response,
     pub control: Control,
+    synchronous_wait: bool,
 }
 struct OutputGuard {
     access: MediaAccess,
@@ -139,6 +142,7 @@ pub struct HttpBroker {
     before_send: Option<(Arc<dyn crate::before_send::BeforeSendSink>, String)>,
     call_index: AtomicU64,
     managed_recovery_route: Option<crate::managed_route::ManagedRecoveryRoute>,
+    synchronous_wait: bool,
 }
 impl HttpBroker {
     pub fn new(
@@ -162,7 +166,12 @@ impl HttpBroker {
             before_send: None,
             call_index: AtomicU64::new(0),
             managed_recovery_route: None,
+            synchronous_wait: false,
         })
+    }
+    pub(crate) fn with_synchronous_wait(mut self) -> Self {
+        self.synchronous_wait = true;
+        self
     }
     pub fn with_before_send(mut self, sink: Arc<dyn crate::before_send::BeforeSendSink>, operation_id: String) -> Self {
         self.before_send = Some((sink, operation_id));
@@ -218,7 +227,7 @@ impl HttpBroker {
         credential: Option<&str>,
         control: &Control,
     ) -> Result<OpenedHttp> {
-        self.open_transport(plan, credential, control, None).await
+        self.open_transport(plan, credential, control, None, false).await
     }
 
     pub(crate) async fn open_websocket_upgrade(
@@ -231,7 +240,7 @@ impl HttpBroker {
         if self.managed_recovery_route.is_some() {
             return Err(error("PERMISSION_DENIED", "A managed HTTP recovery route cannot open a WebSocket"));
         }
-        self.open_transport(plan, credential, control, Some(key)).await
+        self.open_transport(plan, credential, control, Some(key), false).await
     }
 
     async fn open_transport(
@@ -240,6 +249,7 @@ impl HttpBroker {
         credential: Option<&str>,
         control: &Control,
         websocket_key: Option<&str>,
+        synchronous_wait: bool,
     ) -> Result<OpenedHttp> {
         let plan = serde_json::to_value(plan)
             .map_err(|_| error("INVALID_INPUT", "HTTP plan could not be encoded"))?;
@@ -296,6 +306,9 @@ impl HttpBroker {
                     .resolve_to_addrs(destination.url.host_str().unwrap(), &destination.addresses);
                 if websocket_key.is_some() {
                     client = client.http1_only().retry(reqwest::retry::never());
+                }
+                if synchronous_wait {
+                    client = client.connect_timeout(Duration::from_secs(30)).retry(reqwest::retry::never());
                 }
                 let client = client.build()
                     .map_err(|_| {
@@ -424,6 +437,7 @@ impl HttpBroker {
                     self.policy.check(self.policy.scope())?;
                 }
                 if let Some(route) = &self.managed_recovery_route { route.check_live()?; }
+                let _waiting = if synchronous_wait { control.pause_local_budget() } else { None };
                 request.send().await.map_err(|_| {
                     error(
                         "RESOURCE_UNAVAILABLE",
@@ -450,6 +464,7 @@ impl HttpBroker {
                 cause
             })?,
             control,
+            synchronous_wait,
         })
     }
     pub async fn execute(
@@ -477,7 +492,8 @@ impl HttpBroker {
         } else {
             0
         };
-        let opened = self.open(plan, credential, control).await?;
+        let synchronous_wait = self.synchronous_wait && value["method"] == "POST" && value["timeoutMs"] == 0;
+        let opened = self.open_transport(plan, credential, control, None, synchronous_wait).await?;
         let status = opened.response.status().as_u16();
         let mut headers = vec![];
         let mut header_bytes = 0usize;
@@ -515,7 +531,12 @@ impl HttpBroker {
             .guarded(&opened.control, async {
                 let mut stream = opened.response.bytes_stream();
                 let mut bytes = Vec::new();
-                while let Some(chunk) = stream.next().await {
+                loop {
+                    let chunk = {
+                        let _waiting = if opened.synchronous_wait { opened.control.pause_local_budget() } else { None };
+                        stream.next().await
+                    };
+                    let Some(chunk) = chunk else { break };
                     self.policy.check(self.policy.scope())?;
                     let chunk = chunk.map_err(|_| {
                         error("RESOURCE_UNAVAILABLE", "HTTP response body was interrupted")

@@ -85,7 +85,7 @@ fn check_control(control: &Control) -> Result<()> {
         return Err(fail("CANCELLED", "Local request was interrupted"));
     }
     if control
-        .deadline
+        .effective_deadline()
         .is_some_and(|at| std::time::Instant::now() >= at)
     {
         return Err(fail("TIMEOUT", "Local request deadline exhausted"));
@@ -259,6 +259,10 @@ impl ReferenceHost {
     }
     pub fn catalog(&self) -> Result<Vec<CapabilityView>> {
         Ok(lock(&self.inner.catalog)?.list(None))
+    }
+    pub fn supports_synchronous_http_wait(&self) -> bool {
+        self.inner.profile.is_none()
+            && self.inner.package.verified().enabled_features().contains(crate::http::SYNCHRONOUS_WAIT_FEATURE)
     }
     pub fn scope(&self, request_id: &str) -> LeaseScope {
         LeaseScope {
@@ -443,6 +447,11 @@ impl ReferenceHost {
             }}
             let vault=Arc::new(Mutex::new(vault));cleanup.resources(&network,&vault)?;
             let http = HttpBroker::new(network, vault.clone(), MediaAccess{broker:self.inner.media.clone(),scope:scope.clone()}).map_err(native)?;
+            let http = if i["operation"] == "submit"
+                && self.supports_synchronous_http_wait()
+                && prepared.context.as_ref().is_some_and(|c| c.operation()["execution"]["mode"] == "synchronous") {
+                http.with_synchronous_wait()
+            } else { http };
             let http = if let Some(sink) = &self.before_send {
                 let operation = prepared.context.as_ref().and_then(|c| c.operation()["id"].as_str()).unwrap_or(i["operation"].as_str().unwrap()).to_owned();
                 http.with_before_send(sink.clone(), operation)

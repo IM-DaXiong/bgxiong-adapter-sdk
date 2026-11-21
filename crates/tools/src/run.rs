@@ -522,6 +522,11 @@ async fn dispatch(
         policy,
     });
     let ctl = control(&invocation)?;
+    let ctl = if args.operation == "submit" && host.supports_synchronous_http_wait() {
+        Control::with_local_deadline(ctl.deadline.expect("validated invocation deadline"))
+    } else {
+        ctl
+    };
     let invocation: Invocation = serde_json::from_value(invocation).map_err(|_| {
         workspace::invalid(
             "input",

@@ -175,7 +175,7 @@
     {
       "source": "crates/reference-host/src/dispatch.rs",
       "target": "crates/reference-host/src/dispatch.rs",
-      "sha256": "a51f101dde16f05d1d64b390ca1563c0ae3336f10bb5c5d260ce301b56dee7b6",
+      "sha256": "f651e5408ab1ffa2109c19a51b88f9bf89cc1c1a72088db156ffaae9c0ad592b",
       "required": true
     },
     {
@@ -187,7 +187,7 @@
     {
       "source": "crates/reference-host/src/http.rs",
       "target": "crates/reference-host/src/http.rs",
-      "sha256": "daae5b7a6300e1407ff955e50a5cccc54a4381231ababf31a38a26b98df1007c",
+      "sha256": "7453b1e7e0dc4e6c55c26f42ef57cb5fb1749c19a2ae339af2342f0112786d3f",
       "required": true
     },
     {
@@ -301,7 +301,7 @@
     {
       "source": "crates/runtime/src/engine.rs",
       "target": "crates/runtime/src/engine.rs",
-      "sha256": "945737e67e6e0ae156a886c8222b0db510a04db8e0c69b1cead34a6bece5a68a",
+      "sha256": "a785548513318a585eedf9c4da3b53e00c8d761ae5f55395ec278b85b7b6e40b",
       "required": true
     },
     {
@@ -367,7 +367,7 @@
     {
       "source": "crates/tools/src/run.rs",
       "target": "crates/tools/src/run.rs",
-      "sha256": "f1926ac3c2e38854f4159794cc5430536f2f3b4a8bcb1bf5eb45307a352fb2cb",
+      "sha256": "ff3529ecc0cdcfcd5d37698b9170958918f3a99e144c5c77cfa38c10067a77cb",
       "required": true
     },
     {
@@ -421,7 +421,7 @@
     {
       "source": "crates/transport/src/client.rs",
       "target": "crates/transport/src/client.rs",
-      "sha256": "6bed1db3c134edbd38640c0fd902412bff3e37af8739d9e711bc677dbe3ba10d",
+      "sha256": "0fe8709f41e9739df52e6785132c09b6e0863e88783738108f1263e1b786a56f",
       "required": true
     },
     {
@@ -901,7 +901,7 @@
     {
       "source": "protocol/host-feature-catalog.json",
       "target": "protocol/host-feature-catalog.json",
-      "sha256": "07be911e9ecb4f9e3822b5a37e567a7cb4d18b05930f51ffb2e15c56a862279a",
+      "sha256": "662da96423f26d170c54ec7270f5e59e793fe8070002602c46c9d0dbfd1ab5f5",
       "required": true
     },
     {
@@ -1063,7 +1063,7 @@
     {
       "source": "sdk/rust/src/host.rs",
       "target": "sdk/rust/src/host.rs",
-      "sha256": "c6af2d4db6f54645c3b21a5477f835ad0ebc7aa1fb59e7b45fec53e8c9629067",
+      "sha256": "4526cad02b5530cf84e1665a72c98af53e4f46c631a7b9a21834021decce6158",
       "required": true
     },
     {
@@ -1159,7 +1159,7 @@
     {
       "source": "templates/rust/template-lock.json",
       "target": "templates/rust/template-lock.json",
-      "sha256": "b0759f1f25ff0cae7f42beb6a6e2af355bc0f81afada372a05630142c6a8bb02",
+      "sha256": "dec60a00decba53ae8cfd80a7f1d67a74b22032bfff5c4b29d03f2c38eee7ce6",
       "required": true
     },
     {
@@ -1183,7 +1183,7 @@
     {
       "source": "templates/rust/vendor-sdk/sdk/rust/src/host.rs",
       "target": "templates/rust/vendor-sdk/sdk/rust/src/host.rs",
-      "sha256": "c6af2d4db6f54645c3b21a5477f835ad0ebc7aa1fb59e7b45fec53e8c9629067",
+      "sha256": "4526cad02b5530cf84e1665a72c98af53e4f46c631a7b9a21834021decce6158",
       "required": true
     },
     {
@@ -1201,7 +1201,7 @@
     {
       "source": "templates/template-lock.json",
       "target": "templates/template-lock.json",
-      "sha256": "b0759f1f25ff0cae7f42beb6a6e2af355bc0f81afada372a05630142c6a8bb02",
+      "sha256": "dec60a00decba53ae8cfd80a7f1d67a74b22032bfff5c4b29d03f2c38eee7ce6",
       "required": true
     },
     {
@@ -1627,7 +1627,7 @@
     {
       "source": "crates/media/src/lib.rs",
       "target": "crates/media/src/lib.rs",
-      "sha256": "ea25ca4bbbee3f785e11750e6e73203b449b8e2a835e77a9bb51d43c1c6cfaf7",
+      "sha256": "3312670286a0ab7828c7f23b567eea9e21c25341651e031b05136212078f6a6c",
       "required": true
     },
     {
