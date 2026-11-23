@@ -15,6 +15,7 @@ WORKER = "bgx-adapter-v2-worker"
 SDK_LAYOUT = "adapter-sdk-v2"
 BROWSER_BUILD = "tools/form-reference"
 DIST = f"{BROWSER_BUILD}/dist/"
+CHECKOUT_METADATA = {".gitattributes", ".cursor/rules/release-output-root.mdc"}
 
 
 def git(*args):
@@ -25,7 +26,7 @@ def measure(root, paths):
     rows = []
     seen = set()
     for path in sorted(paths):
-        if path != ".gitattributes":
+        if path not in CHECKOUT_METADATA:
             safe_sdk_path(path)
         require(path.casefold() not in seen, "DUPLICATE_BUILD_INPUT: " + path)
         seen.add(path.casefold())
