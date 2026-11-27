@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "localId": "transcription-policy",
+  "capabilityKey": "speech.transcribe.policy",
+  "transportSlot": "generic",
+  "modelIds": [
+    "fixture-speech"
+  ],
+  "operations": [
+    {
+      "id": "std/speech.transcribe.policy",
+      "version": 1,
+      "label": "Speech transcription policy",
+      "inputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
+        "digest": "be2956fa53c770345f359db2aa66d1fd1c95d4cfba75683b09ef1c4f84218cd5"
+      },
+      "outputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+        "digest": "4525fd177c4c671aeb5d74a96e523592b16a77c921b1d6f129fb1cb4c25f8c35"
+      },
+      "resumeSchema": null,
+      "uiSchema": {
+        "controls": []
+      },
+      "mediaSlots": [],
+      "execution": {
+        "mode": "synchronous",
+        "streaming": false,
+        "cancellation": "unsupported",
+        "resumable": false,
+        "remoteIdempotency": false
+      },
+      "outputSlots": []
+    }
+  ],
+  "schemas": [
+    {
+      "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
+      "digest": "be2956fa53c770345f359db2aa66d1fd1c95d4cfba75683b09ef1c4f84218cd5",
+      "schemaJson": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.input.schema.json\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"schemaVersion\": {\n      \"const\": 1\n    },\n    \"usage\": {\n      \"enum\": [\n        \"chatMessage\",\n        \"continuousDictation\"\n      ]\n    }\n  },\n  \"required\": [\n    \"schemaVersion\",\n    \"usage\"\n  ],\n  \"additionalProperties\": false\n}\n"
+    },
+    {
+      "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+      "digest": "4525fd177c4c671aeb5d74a96e523592b16a77c921b1d6f129fb1cb4c25f8c35",
+      "schemaJson": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json\",\n  \"oneOf\": [\n    {\n      \"type\": \"object\",\n      \"properties\": {\n        \"schemaVersion\": {\n          \"const\": 1\n        },\n        \"usage\": {\n          \"const\": \"chatMessage\"\n        },\n        \"strategy\": {\n          \"const\": \"wholeFile\"\n        },\n        \"maxBatchSamples\": {\n          \"type\": \"integer\",\n          \"minimum\": 1,\n          \"maximum\": 9007199254740991\n        }\n      },\n      \"required\": [\n        \"schemaVersion\",\n        \"usage\",\n        \"strategy\",\n        \"maxBatchSamples\"\n      ],\n      \"additionalProperties\": false\n    },\n    {\n      \"type\": \"object\",\n      \"properties\": {\n        \"schemaVersion\": {\n          \"const\": 1\n        },\n        \"usage\": {\n          \"const\": \"continuousDictation\"\n        },\n        \"strategy\": {\n          \"const\": \"progressiveFile\"\n        },\n        \"maxBatchSamples\": {\n          \"type\": \"integer\",\n          \"minimum\": 1,\n          \"maximum\": 9007199254740991\n        },\n        \"minPauseFlushSamples\": {\n          \"type\": \"integer\",\n          \"minimum\": 1,\n          \"maximum\": 9007199254740991\n        },\n        \"maxBufferedMs\": {\n          \"type\": \"integer\",\n          \"minimum\": 1,\n          \"maximum\": 9007199254740991\n        }\n      },\n      \"required\": [\n        \"schemaVersion\",\n        \"usage\",\n        \"strategy\",\n        \"maxBatchSamples\",\n        \"minPauseFlushSamples\",\n        \"maxBufferedMs\"\n      ],\n      \"additionalProperties\": false\n    }\n  ]\n}\n"
+    },
+    {
+      "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
+      "digest": "0c6bf69f5336c00d77f5bdcdb17f1fdda3d1462a47796b35cf8ff5d230f2cfa9",
+      "schemaJson": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n"
+    }
+  ],
+  "configurationSchema": {
+    "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
+    "digest": "0c6bf69f5336c00d77f5bdcdb17f1fdda3d1462a47796b35cf8ff5d230f2cfa9"
+  }
+}

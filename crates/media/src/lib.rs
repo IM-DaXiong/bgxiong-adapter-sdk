@@ -1,6 +1,8 @@
 //! Development media store. Run blocking file/probe work on the embedding host's
 //! blocking executor. Every streaming loop observes its request Control; chunks
 //! and probe output use the published resource budgets. Paths never enter wire DTOs.
+pub mod transcription_policy;
+
 use bgx_adapter_v2_ports::{
     decimal_u64, resource_policy,
     wire::{

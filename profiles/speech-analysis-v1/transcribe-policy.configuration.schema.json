@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
+  "type": "object",
+  "additionalProperties": false
+}

@@ -356,6 +356,37 @@ fn transcription_profile_rejects_paths_timestamps_and_inconsistent_speech_result
 }
 
 #[test]
+fn subtitle_profile_accepts_only_the_separate_timed_operation() {
+    use bgx_adapter_v2_validator::{identity, SchemaRegistry};
+    identity::validate_capability_namespace("local.test", "speech.subtitle").unwrap();
+    identity::validate_operation_namespace("local.test", "std/speech.subtitle").unwrap();
+    let definition = include_str!("../../../profiles/speech-analysis-v1/fixtures/subtitle-capability.json");
+    let declaration: CapabilityContractV2 = serde_json::from_str(definition).unwrap();
+    bgx_adapter_v2_validator::validate_contract(&declaration).unwrap();
+    let raw: Value = serde_json::from_str(definition).unwrap();
+    let registry = SchemaRegistry::register(raw["schemas"].as_array().unwrap().iter().map(|s| (
+        s["id"].as_str().unwrap().into(), s["schemaJson"].as_str().unwrap().into(),
+        s["digest"].as_str().unwrap().into()
+    )).collect()).unwrap();
+    let op = &raw["operations"][0];
+    let input = op["inputSchema"]["id"].as_str().unwrap();
+    let output = op["outputSchema"]["id"].as_str().unwrap();
+    let request = json!({"schemaVersion":1,"audio":{"mediaId":"authorized-audio"},"timing":"segmentTimed"});
+    registry.validate(input, &request).unwrap();
+    let mut bad = request;
+    bad["timing"] = json!("textOnly");
+    assert!(registry.validate(input, &bad).is_err());
+    let mut result: Value = serde_json::from_str(include_str!(
+        "../../../profiles/speech-analysis-v1/fixtures/subtitle-result.json"
+    )).unwrap();
+    registry.validate(output, &result).unwrap();
+    result["speechState"] = json!("no_speech");
+    assert!(registry.validate(output, &result).is_err());
+    result["cues"] = json!([]);
+    registry.validate(output, &result).unwrap();
+}
+
+#[test]
 fn transcribe_package_contract_uses_the_registered_schema_digests() {
     let declaration: CapabilityContractV2 = serde_json::from_str(include_str!(
         "../../../profiles/speech-analysis-v1/fixtures/transcribe-capability.json"
@@ -370,4 +401,28 @@ fn transcribe_package_contract_uses_the_registered_schema_digests() {
     assert!(bgx_adapter_v2_validator::identity::validate_capability_namespace(
         "local.test", "speech.undeclared"
     ).is_err());
+}
+
+#[test]
+fn transcription_policy_uses_registered_schema() {
+    use bgx_adapter_v2_validator::{identity, SchemaRegistry};
+    let contract: Value = serde_json::from_str(include_str!(
+        "../../../profiles/speech-analysis-v1/fixtures/transcribe-policy-capability.json"
+    )).unwrap();
+    identity::validate_capability_namespace("local.test", "speech.transcribe.policy").unwrap();
+    identity::validate_operation_namespace("local.test", "std/speech.transcribe.policy").unwrap();
+    let typed = serde_json::from_value(contract.clone()).unwrap();
+    bgx_adapter_v2_validator::validate_contract(&typed).unwrap();
+    let schemas = contract["schemas"].as_array().unwrap();
+    let registry = SchemaRegistry::register(schemas.iter().map(|schema| {
+        (schema["id"].as_str().unwrap().into(), schema["schemaJson"].as_str().unwrap().into(),
+            schema["digest"].as_str().unwrap().into())
+    }).collect()).unwrap();
+    let output = schemas[1]["id"].as_str().unwrap();
+    let mut valid = json!({"schemaVersion":1,"usage":"chatMessage","strategy":"wholeFile","maxBatchSamples":200000});
+    registry.validate(output, &valid).unwrap();
+    valid["maxBufferedMs"] = json!(8000);
+    assert!(registry.validate(output, &valid).is_err());
+    valid["maxBatchSamples"] = json!(0);
+    assert!(registry.validate(output, &valid).is_err());
 }

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "usage": {
+          "const": "chatMessage"
+        },
+        "strategy": {
+          "const": "wholeFile"
+        },
+        "maxBatchSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "usage",
+        "strategy",
+        "maxBatchSamples"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "usage": {
+          "const": "continuousDictation"
+        },
+        "strategy": {
+          "const": "progressiveFile"
+        },
+        "maxBatchSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "minPauseFlushSamples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "maxBufferedMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "usage",
+        "strategy",
+        "maxBatchSamples",
+        "minPauseFlushSamples",
+        "maxBufferedMs"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

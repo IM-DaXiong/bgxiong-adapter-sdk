@@ -47,7 +47,8 @@
     "video.speech",
     "video.edit",
     "speech.diarize",
-    "speech.transcribe"
+    "speech.transcribe",
+    "speech.transcribe.policy"
   ],
   "standardProfiles": [
     {
@@ -129,6 +130,19 @@
         "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe.resume.schema.json",
         "digest": "3e85938eefb1467f21e84f156115c1ba0c53638e7b2b544ac6f93be9d11593bd"
       }
+    },
+    {
+      "operationId": "std/speech.transcribe.policy",
+      "operationVersion": 1,
+      "inputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
+        "digest": "be2956fa53c770345f359db2aa66d1fd1c95d4cfba75683b09ef1c4f84218cd5"
+      },
+      "outputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+        "digest": "4525fd177c4c671aeb5d74a96e523592b16a77c921b1d6f129fb1cb4c25f8c35"
+      },
+      "resumeSchema": null
     }
   ],
   "usageNames": {

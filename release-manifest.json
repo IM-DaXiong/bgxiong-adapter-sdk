@@ -481,7 +481,7 @@
     {
       "source": "crates/validator/src/input.rs",
       "target": "crates/validator/src/input.rs",
-      "sha256": "e24912d4e0f46de5804050de05b24c861f2ef7579f477fe56493130a5ad7c9c7",
+      "sha256": "365bfecbabc34af27ab6636b78566e8619cc5735448986d2f92ee00ba33a9174",
       "required": true
     },
     {
@@ -529,7 +529,7 @@
     {
       "source": "crates/validator/tests/capability_registry.rs",
       "target": "crates/validator/tests/capability_registry.rs",
-      "sha256": "bdeb98964dbe12068cdc7b86965271eac06d64eadac585e5f12ec6ada22185d0",
+      "sha256": "e84e83f3ef224e98a701df551148ef8bb435bebc20e7184ad229c5f4312e565e",
       "required": true
     },
     {
@@ -919,7 +919,7 @@
     {
       "source": "protocol/vendor-adapter-protocol.json",
       "target": "protocol/vendor-adapter-protocol.json",
-      "sha256": "b12ded3bcd35b1c87a4a7414fb28c8935830ebe0dbec6af368374e30fcd60d99",
+      "sha256": "bff39a57c19a7d11dda4b925c844b52f8dc5a71eea76d90197fc6d77aa1acd3a",
       "required": true
     },
     {
@@ -1627,13 +1627,13 @@
     {
       "source": "crates/media/src/lib.rs",
       "target": "crates/media/src/lib.rs",
-      "sha256": "3312670286a0ab7828c7f23b567eea9e21c25341651e031b05136212078f6a6c",
+      "sha256": "27cec4f672d64bc841c6a0d2f1b67525b4bf6bb85117a6c298a98b1c2b844546",
       "required": true
     },
     {
       "source": "profiles/speech-analysis-v1/README.md",
       "target": "profiles/speech-analysis-v1/README.md",
-      "sha256": "0289d9cdc5faf6cfe8025897893d3dc06af6405565a85ab444d0e86d1cf45c54",
+      "sha256": "4f18d30205c0e6b84dc1ded37e58ec5a6e42c39f0084922277ab4d4024047935",
       "required": true
     },
     {
@@ -1892,6 +1892,36 @@
       "source": "examples/form-options/src/lib.rs",
       "target": "examples/form-options/src/lib.rs",
       "sha256": "a9f0e7d207cbe041c8c2b6884e9cb8a752c24e592c58d4192bd72a23994d2177",
+      "required": true
+    },
+    {
+      "source": "crates/media/src/transcription_policy.rs",
+      "target": "crates/media/src/transcription_policy.rs",
+      "sha256": "b6feded95b67fd971276fd5a0302387ff1b329780f71165b5a0ddd6b1c76a257",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/fixtures/transcribe-policy-capability.json",
+      "target": "profiles/speech-analysis-v1/fixtures/transcribe-policy-capability.json",
+      "sha256": "0de852e011b87fa343b63847b6066738c8ebd96ab85a0e636df5b48e3edda48b",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
+      "target": "profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
+      "sha256": "be2956fa53c770345f359db2aa66d1fd1c95d4cfba75683b09ef1c4f84218cd5",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+      "target": "profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+      "sha256": "4525fd177c4c671aeb5d74a96e523592b16a77c921b1d6f129fb1cb4c25f8c35",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
+      "target": "profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
+      "sha256": "0c6bf69f5336c00d77f5bdcdb17f1fdda3d1462a47796b35cf8ff5d230f2cfa9",
       "required": true
     }
   ]

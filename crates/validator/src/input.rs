@@ -276,6 +276,14 @@ fn validate_standard_profile(op: &Value) -> Result<(), ContractError> {
     let published = protocol["standardProfiles"].as_array().unwrap().iter()
         .find(|p| p["operationId"] == id && p["operationVersion"] == op["version"])
         .ok_or_else(|| ContractError::new("INVALID_PACKAGE", id, "standard operation version is not published"))?;
+    if id == "std/speech.transcribe.policy"
+        && (op["mediaSlots"] != serde_json::json!([]) || op["outputSlots"] != serde_json::json!([])
+            || op["execution"]["mode"] != "synchronous" || op["execution"]["streaming"] != false
+            || op["execution"]["resumable"] != false || op["execution"]["remoteIdempotency"] != false
+            || op["execution"]["cancellation"] != "unsupported")
+    {
+        return Err(ContractError::new("INVALID_PACKAGE", id, "transcription policy must be local, synchronous and media-free"));
+    }
     for field in ["inputSchema", "outputSchema", "resumeSchema"] {
         if op[field] != published[field] {
             return Err(ContractError::new("INVALID_PACKAGE", id, "standard operation schema differs from the published identity"));
