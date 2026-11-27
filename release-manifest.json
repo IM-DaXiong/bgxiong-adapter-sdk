@@ -529,7 +529,7 @@
     {
       "source": "crates/validator/tests/capability_registry.rs",
       "target": "crates/validator/tests/capability_registry.rs",
-      "sha256": "3f5612e41fb25bc748328a20b2701de6e26fb53a7e1b50012e2ac2f59413ad9c",
+      "sha256": "bdeb98964dbe12068cdc7b86965271eac06d64eadac585e5f12ec6ada22185d0",
       "required": true
     },
     {
@@ -919,7 +919,7 @@
     {
       "source": "protocol/vendor-adapter-protocol.json",
       "target": "protocol/vendor-adapter-protocol.json",
-      "sha256": "bdc4bf534bbf06ab31b625b3ed6d08e2972e50d78c9ed604627bcad4d767b932",
+      "sha256": "b12ded3bcd35b1c87a4a7414fb28c8935830ebe0dbec6af368374e30fcd60d99",
       "required": true
     },
     {
@@ -1633,7 +1633,7 @@
     {
       "source": "profiles/speech-analysis-v1/README.md",
       "target": "profiles/speech-analysis-v1/README.md",
-      "sha256": "643d08b222e8a461955c4b6fd8d7246dccd992cdd60ccbd00e39fd865ae1dc95",
+      "sha256": "0289d9cdc5faf6cfe8025897893d3dc06af6405565a85ab444d0e86d1cf45c54",
       "required": true
     },
     {
@@ -1652,6 +1652,36 @@
       "source": "profiles/speech-analysis-v1/resume.schema.json",
       "target": "profiles/speech-analysis-v1/resume.schema.json",
       "sha256": "f921c5cc7d877dd004f220fea6304d260c908ce45a2898e53bbd95b38a98e327",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/fixtures/transcribe-capability.json",
+      "target": "profiles/speech-analysis-v1/fixtures/transcribe-capability.json",
+      "sha256": "9169bf938055078f33892f50e2cf8dd98e7136c89e066dc95b7be75a9cd5a693",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/fixtures/transcribe-result.json",
+      "target": "profiles/speech-analysis-v1/fixtures/transcribe-result.json",
+      "sha256": "ec8bbfa8f10df72d35d15bd1feab6adb9a1533a67eeb611b78bdc3e79030cbb4",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/transcribe.input.schema.json",
+      "target": "profiles/speech-analysis-v1/transcribe.input.schema.json",
+      "sha256": "c55edfe76ed70230fcb4a4b7c46c5207f2e5e90de1bd15cda91c7743a66a1e23",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/transcribe.output.schema.json",
+      "target": "profiles/speech-analysis-v1/transcribe.output.schema.json",
+      "sha256": "13810cacacb7a3c720117f7d6c7668ce83d0e734f8562e2a0c8696d3d387e6bc",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/transcribe.resume.schema.json",
+      "target": "profiles/speech-analysis-v1/transcribe.resume.schema.json",
+      "sha256": "3e85938eefb1467f21e84f156115c1ba0c53638e7b2b544ac6f93be9d11593bd",
       "required": true
     },
     {

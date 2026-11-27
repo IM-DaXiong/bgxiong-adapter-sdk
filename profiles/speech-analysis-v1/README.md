@@ -9,3 +9,7 @@ Speaker IDs are anonymous, stable across the complete source and retained on res
 `overlapDetection: "unsupported"` is a capability limitation, not proof that the source has no overlapping speech. Clients must keep manual correction available. `available` may only be returned by an implementation that actually ran its declared overlap detector.
 
 Asynchronous adapters persist and reuse accepted jobs and successful analysis artifacts under the existing checkpoint owner. The public resume token binds sourceFingerprint and jobId. Querying or resuming must not restart completed inference unnecessarily. Cancellation closes only resources owned by that job; completed source-time artifacts may be retained for an explicit resume.
+
+## Transcription
+
+The `speech.transcribe` capability exposes `std/speech.transcribe` version 1. Send an authorized `audio` media slot and request `textOnly`. A successful result reports the duration of the submitted audio. Use `no_speech` with an empty string when recognition finds no speech. A failed task uses the standard error result. Resumable adapters persist the opaque job ID and query it through the standard checkpoint flow.

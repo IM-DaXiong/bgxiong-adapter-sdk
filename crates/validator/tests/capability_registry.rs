@@ -315,3 +315,59 @@ fn operation_input_profile_uses_each_packages_schema_and_preserves_open_json() {
     let binding = Binding::new("old-operation".into(), &unnegotiated, 1, configuration).unwrap();
     assert_eq!(catalog.register(&unnegotiated, &binding, &[a]).unwrap_err().code, "UNSUPPORTED_FEATURE");
 }
+
+#[test]
+fn transcription_profile_rejects_paths_timestamps_and_inconsistent_speech_results() {
+    use bgx_adapter_v2_validator::{identity, SchemaRegistry};
+
+    identity::validate_capability_namespace("local.test", "speech.transcribe").unwrap();
+    identity::validate_operation_namespace("local.test", "std/speech.transcribe").unwrap();
+    let schemas = [
+        include_str!("../../../profiles/speech-analysis-v1/transcribe.input.schema.json"),
+        include_str!("../../../profiles/speech-analysis-v1/transcribe.output.schema.json"),
+        include_str!("../../../profiles/speech-analysis-v1/transcribe.resume.schema.json"),
+    ];
+    let registry = SchemaRegistry::register(schemas.iter().map(|schema| {
+        let json: Value = serde_json::from_str(schema).unwrap();
+        (json["$id"].as_str().unwrap().into(), schema.to_string(), hash_bytes(schema.as_bytes()))
+    }).collect()).unwrap();
+    let prefix = "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe.";
+    let input_id = format!("{prefix}input.schema.json");
+    let output_id = format!("{prefix}output.schema.json");
+    let input = json!({"schemaVersion": 1, "audio": {"mediaId":"authorized-wav"}, "timing":"textOnly"});
+    registry.validate(&input_id, &input).unwrap();
+    let mut with_path = input.clone();
+    with_path["audio"] = json!({"path":"private.wav"});
+    assert!(registry.validate(&input_id, &with_path).is_err());
+    let mut timestamps = input;
+    timestamps["timing"] = json!("word");
+    assert!(registry.validate(&input_id, &timestamps).is_err());
+    let mut speech: Value = serde_json::from_str(include_str!(
+        "../../../profiles/speech-analysis-v1/fixtures/transcribe-result.json"
+    )).unwrap();
+    registry.validate(&output_id, &speech).unwrap();
+    speech["speechState"] = json!("no_speech");
+    assert!(registry.validate(&output_id, &speech).is_err());
+    speech["text"] = json!("");
+    registry.validate(&output_id, &speech).unwrap();
+    speech["speechState"] = json!("speech");
+    speech["text"] = json!("   ");
+    assert!(registry.validate(&output_id, &speech).is_err());
+}
+
+#[test]
+fn transcribe_package_contract_uses_the_registered_schema_digests() {
+    let declaration: CapabilityContractV2 = serde_json::from_str(include_str!(
+        "../../../profiles/speech-analysis-v1/fixtures/transcribe-capability.json"
+    )).unwrap();
+    bgx_adapter_v2_validator::validate_contract(&declaration).unwrap();
+
+    let mut invalid = serde_json::to_value(&declaration).unwrap();
+    invalid["schemas"][0]["digest"] = json!("0".repeat(64));
+    let invalid = serde_json::from_value(invalid).unwrap();
+    assert!(bgx_adapter_v2_validator::validate_contract(&invalid).is_err());
+
+    assert!(bgx_adapter_v2_validator::identity::validate_capability_namespace(
+        "local.test", "speech.undeclared"
+    ).is_err());
+}
