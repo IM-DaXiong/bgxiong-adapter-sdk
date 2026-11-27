@@ -913,7 +913,7 @@
     {
       "source": "protocol/schema-policy.json",
       "target": "protocol/schema-policy.json",
-      "sha256": "4a269dc0c3870957f68ffd537277e628f4aecb764b7904bed44f678e6f95930c",
+      "sha256": "0e054d1e6b8ee8e2d5bd09858388cc3e7bb7e1ffaf13d5cde36b1361c93a7b1c",
       "required": true
     },
     {

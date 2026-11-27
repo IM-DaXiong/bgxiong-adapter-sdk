@@ -62,7 +62,8 @@
     "x-mediaKind",
     "x-resourceHint",
     "x-portraitDefault",
-    "x-targetTracking"
+    "x-targetTracking",
+    "x-mediaTargetRangeRepair"
   ],
   "formatPolicy": "assert-known-formats-reject-unknown",
   "limits": {
