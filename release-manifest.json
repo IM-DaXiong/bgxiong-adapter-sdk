@@ -1255,7 +1255,7 @@
     {
       "source": "tools/form-reference/dist/protocol/schema-policy.json",
       "target": "tools/form-reference/dist/protocol/schema-policy.json",
-      "sha256": "c0383094c91ae89724c0989532588577938328b87c32360bf65be6f56c528f16",
+      "sha256": "6356967e3ff98e4fcc6c503c1de11e6dd66ac33a622531d1d8e1e026285a1126",
       "required": true
     },
     {
