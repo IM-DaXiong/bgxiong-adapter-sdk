@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkRelease": "2.4.0",
+  "sdkRelease": "2.5.0",
   "status": "NOT_RUN",
   "sealed": false,
   "sdkReady": false,
@@ -18,7 +18,7 @@
   "mainApplicationV2Import": "NOT_SUPPORTED",
   "publication": "NOT_PUBLISHED",
   "projectLicense": "LicenseRef-Proprietary",
-  "note": "Candidate identity sdkRelease=2.4.0 matches release-manifest.json. Protocol/WIT/author SDK identity remains 2.0.0. G00-G06 and SDK_READY remain NOT_RUN/unsealed (sealed=false, sdkReady=false). NOT_ADOPTED/NOT_SUPPORTED describe the standalone full-candidate governance, not the installed workflow adapter feature. developerPreview.installationVersion 0.6.1030 is the historical limited preview, not the current 0.6.1119 application. See DEVELOPER-PREVIEW.zh-CN.md. Do not claim full SDK sealed readiness from this file alone.",
+  "note": "Candidate identity sdkRelease=2.5.0 matches release-manifest.json. Protocol/WIT/author SDK identity remains 2.0.0. G00-G06 and SDK_READY remain NOT_RUN/unsealed (sealed=false, sdkReady=false). NOT_ADOPTED/NOT_SUPPORTED describe the standalone full-candidate governance, not the installed workflow adapter feature. developerPreview.installationVersion 0.6.1030 is the historical limited preview, not the current 0.6.1119 application. See DEVELOPER-PREVIEW.zh-CN.md. Do not claim full SDK sealed readiness from this file alone.",
   "scope": "STANDALONE_SDK_FULL_CONFORMANCE",
   "developerPreview": {
     "channel": "DEVELOPER_PREVIEW",

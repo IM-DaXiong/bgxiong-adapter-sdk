@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 2,
+  "pluginId": "local.sdk.palette",
+  "pluginVersion": "1.0.0",
+  "capabilityContracts": [
+    {
+      "schemaVersion": 2,
+      "localId": "preview",
+      "capabilityKey": "local.sdk.palette/preview",
+      "transportSlot": "generic",
+      "modelIds": [
+        "palette-preview"
+      ],
+      "configurationSchema": {
+        "id": "configuration",
+        "digest": "ff1b2d8857c8e4a2cd87b566a798c5d1cd937fe8a13363e59a51231b4b328939"
+      },
+      "operations": [
+        {
+          "id": "local.sdk.palette/preview",
+          "version": 1,
+          "label": "Palette preview",
+          "inputSchema": {
+            "id": "input",
+            "digest": "2feec0396834559552812291e0d5f7a4b1ce3e71e28b03ec56523b615a966183"
+          },
+          "outputSchema": {
+            "id": "output",
+            "digest": "b85983871c13bf4304a2e43fcf8968d5e7b3f8b59332337cb405c1c45028a3aa"
+          },
+          "resumeSchema": null,
+          "uiSchema": {
+            "controls": [
+              {
+                "fieldPointer": "/colorize",
+                "widget": "toggle",
+                "label": "Colorize",
+                "description": "",
+                "group": "Palette"
+              },
+              {
+                "fieldPointer": "/palette",
+                "widget": "select",
+                "label": "Palette",
+                "description": "",
+                "group": "Palette"
+              }
+            ],
+            "dynamicOptions": [
+              {
+                "fieldPointer": "/palette",
+                "enabledBy": "/colorize"
+              }
+            ]
+          },
+          "mediaSlots": [],
+          "execution": {
+            "mode": "synchronous",
+            "streaming": false,
+            "cancellation": "unsupported",
+            "resumable": false,
+            "remoteIdempotency": false
+          },
+          "outputSlots": [
+            {
+              "role": "answer",
+              "kind": "text",
+              "minCount": 1,
+              "maxCount": null
+            }
+          ]
+        }
+      ],
+      "schemas": [
+        {
+          "id": "input",
+          "digest": "2feec0396834559552812291e0d5f7a4b1ce3e71e28b03ec56523b615a966183",
+          "schemaJson": "{\"type\":\"object\",\"properties\":{\"colorize\":{\"type\":\"boolean\",\"default\":false},\"palette\":{\"type\":\"string\",\"default\":\"\"}},\"required\":[],\"additionalProperties\":false}"
+        },
+        {
+          "id": "output",
+          "digest": "b85983871c13bf4304a2e43fcf8968d5e7b3f8b59332337cb405c1c45028a3aa",
+          "schemaJson": "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\"}},\"required\":[\"text\"],\"additionalProperties\":false}"
+        },
+        {
+          "id": "configuration",
+          "digest": "ff1b2d8857c8e4a2cd87b566a798c5d1cd937fe8a13363e59a51231b4b328939",
+          "schemaJson": "{\"type\":\"object\",\"properties\":{},\"required\":[],\"additionalProperties\":false}"
+        }
+      ]
+    }
+  ]
+}

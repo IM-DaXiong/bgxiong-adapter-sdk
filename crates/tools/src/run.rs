@@ -402,7 +402,7 @@ async fn dispatch(
         && bgx_adapter_v2_validator::operation_input::is_probe(&payload);
     let imported_query = args.operation == "query" && config.imported_query.is_some();
     let discover = matches!(args.operation.as_str(), "submit" | "upload")
-        || (args.operation == "probe" && matches!(payload["kind"].as_str(), Some("connectivity" | "operation_preflight")))
+        || (args.operation == "probe" && matches!(payload["kind"].as_str(), Some("connectivity" | "operation_preflight" | "operation_form_options")))
         || input_preflight || imported_query;
     let mut reference: Option<CapabilityRef> = None;
     if discover {
@@ -443,7 +443,7 @@ async fn dispatch(
             let selected: CapabilityRef = serde_json::from_value(payload["selection"].clone())
                 .map_err(|_| workspace::invalid("selection", "Invalid frozen operation selection"))?;
             reference = Some(selected);
-        } else if !imported_query && (args.operation != "probe" || payload["kind"] == "operation_preflight") {
+        } else if !imported_query && (args.operation != "probe" || matches!(payload["kind"].as_str(), Some("operation_preflight" | "operation_form_options"))) {
             let mut matches = host
                 .catalog()
                 .map_err(host_error)?

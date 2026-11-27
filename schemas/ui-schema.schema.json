@@ -53,6 +53,30 @@
         ],
         "additionalProperties": false
       }
+    },
+    "dynamicOptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fieldPointer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "enabledBy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "fieldPointer"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64,
+      "minItems": 1
     }
   },
   "required": [

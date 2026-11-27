@@ -65,6 +65,12 @@
       "semantics": "Metadata-only preflight bound to the selected package, operation, configuration, environment and unmodified JSON input. The package supplies diagnostics and opaque preparation material."
     },
     {
+      "id": "operation-form-options-v1",
+      "requiredImports": [],
+      "invocationFeature": false,
+      "semantics": "Read choices for declared operation controls using bounded buffered GET requests on the selected binding."
+    },
+    {
       "id": "synchronous-http-wait-v1",
       "requiredImports": ["host-http"],
       "invocationFeature": false,

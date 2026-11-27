@@ -374,6 +374,12 @@ pub fn validate_response(
             serde_json::from_str(i["payloadJson"].as_str().unwrap()).map_err(|_| {
                 ContractError::new("INVALID_INPUT", "/payloadJson", "invalid probe payload")
             })?;
+        if request["kind"] == crate::form_options::KIND || data["kind"] == crate::form_options::KIND {
+            if request["kind"] != data["kind"] {
+                return Err(ContractError::new("INVALID_INPUT", "/kind", "Form options response kind differs from request"));
+            }
+            return Ok(());
+        }
         if crate::operation_input::is_probe(&request) {
             return crate::operation_input::validate_result(&request, &data);
         }

@@ -186,3 +186,5 @@ SDK 2.1.4 的 before-send 审计保留查询键及其顺序，查询值统一写
 适配包声明 requiredFeatures/optionalFeatures 中的 `opaque-file-upload-name-v1`，宿主 supportedFeatures 同时提供它才会启用。仅测量结果为 kind=file、mime=application/octet-stream、持久文件名扩展为 bin 的租约，可以使用不同的合法 multipart fileName。别名只用于 HTTP Content-Disposition，内容、MIME、摘要、持久对象和回执不变；不表示 SDK 已识别或验证目标格式。接收端负责该格式的业务解析。
 
 已识别图片、音频、视频及其它已识别文件仍严格匹配测量扩展名；客户端不能伪造 MIME、路径、其它请求的租约，网络范围也不因别名扩大。未协商或旧任务继续保持原限制，不能用改历史身份启用新能力。原 WIT、协议版本和媒体 DTO 不变。
+
+SDK 2.5.0 新增 `operation-form-options-v1`。将其加入受信宿主 `supportedFeatures` 后，由已核验的包声明协商。沿用 `invocation_features` 投影生成 WIT `enabledFeatures`。参考宿主通过 `probe` 按冻结操作引用及绑定查询选项，完成后核对全部字段，不写连通性就绪回执。宿主应异步读取选项，并按当前选择、配置和请求代次接收结果。字段不可用时允许关闭工作台，提交时由适配包再次校验。

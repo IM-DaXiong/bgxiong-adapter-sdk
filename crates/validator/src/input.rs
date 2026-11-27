@@ -120,6 +120,7 @@ pub fn validate_contract(contract: &CapabilityContractV2) -> Result<(), Contract
         for key in ["inputSchema", "outputSchema", "resumeSchema"] {
             check_ref(&r, &c, &op[key])?;
         }
+        crate::form_options::validate_declaration(op, &r)?;
         if op["execution"]["resumable"] == true
             && op["execution"]["mode"] == "asynchronous"
             && op["resumeSchema"].is_null()
@@ -238,7 +239,7 @@ fn validate_controls(r: &SchemaRegistry, op: &Value) -> Result<(), ContractError
                 "number" => accepts_type(&field, "number") || accepts_type(&field, "integer"),
                 "integer" => accepts_type(&field, "integer"),
                 "toggle" | "checkbox" => accepts_type(&field, "boolean"),
-                "select" => field.get("enum").is_some_and(Value::is_array),
+                "select" => field.get("enum").is_some_and(Value::is_array) || op["uiSchema"]["dynamicOptions"].as_array().is_some_and(|fields| fields.iter().any(|f| f["fieldPointer"] == pointer)),
                 "object" => accepts_type(&field, "object"),
                 "repeat" => accepts_type(&field, "array")
                     && (field.get("items").is_some() || field.get("prefixItems").is_some()),

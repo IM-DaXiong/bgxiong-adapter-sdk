@@ -477,7 +477,8 @@ impl ReferenceHost {
             }
             let features = self.inner.package.verified().enabled_features();
             let sockets = crate::websocket::WebSockets::new(http.clone(), features.contains(crate::websocket::FEATURE));
-            let kernel=Kernel{metadata_only,inner:self.inner.clone(),scope:scope.clone(),http:http.clone(),streams:HttpStreams::new(http,features.clone()),sockets,publisher:publisher.clone(),context:prepared.context.clone(),session:prepared.session.clone(),root_id:prepared.root_id.clone(),trace:trace.clone()};
+            let form_options = probe_payload.as_ref().is_some_and(|p| p["kind"] == bgx_adapter_v2_validator::form_options::KIND);
+            let kernel=Kernel{form_options,metadata_only,inner:self.inner.clone(),scope:scope.clone(),http:http.clone(),streams:HttpStreams::new(http,features.clone()),sockets,publisher:publisher.clone(),context:prepared.context.clone(),session:prepared.session.clone(),root_id:prepared.root_id.clone(),trace:trace.clone()};
             let identity=serde_json::from_value(encode(self.inner.package.verified().identity())).map_err(|_|fail("INTERNAL_ERROR","Cannot encode verified package identity"))?;
             let worker=async{
                 let local_cancel=if i["operation"]=="cancel"{prepared.context.as_ref().map(|c|c.operation()["execution"]["cancellation"].clone()).filter(|v|v!="remote")}else{None};
@@ -615,7 +616,10 @@ impl Inner {
                     return Ok(prepared);
                 }
                 if root_id.is_some() { return Err(fail("INVALID_INPUT", "This probe cannot access a task checkpoint")); }
-                if bgx_adapter_v2_validator::operation_input::is_probe(&payload) {
+                if payload["kind"] == bgx_adapter_v2_validator::form_options::KIND {
+                    let selected = reference.ok_or_else(|| fail("INVALID_INPUT","Form options require a selected operation"))?;
+                    bgx_adapter_v2_validator::form_options::selected_operation(&*lock(&self.catalog)?, selected, &self.binding, self.package.verified(), &payload).map_err(cv)?;
+                } else if bgx_adapter_v2_validator::operation_input::is_probe(&payload) {
                     let selected = reference.ok_or_else(|| fail("INVALID_INPUT", "Preflight requires an explicit capability reference"))?;
                     bgx_adapter_v2_validator::operation_input::validate_request(
                         &*lock(&self.catalog)?, selected, &self.binding, &payload,
@@ -859,6 +863,12 @@ impl Inner {
             "probe" => {
                 let payload: Value = serde_json::from_str(i["payloadJson"].as_str().unwrap())
                     .map_err(|_| fail("INVALID_INPUT", "Invalid probe payload"))?;
+                if payload["kind"] == bgx_adapter_v2_validator::form_options::KIND {
+                    let selected = reference.ok_or_else(|| fail("INVALID_INPUT","Form options require a selected operation"))?;
+                    let op = bgx_adapter_v2_validator::form_options::selected_operation(&*lock(&self.catalog)?, selected, &self.binding, self.package.verified(), &payload).map_err(cv)?;
+                    bgx_adapter_v2_validator::form_options::validate_fields(&op, &data).map_err(cv)?;
+                    return Ok(None);
+                }
                 if bgx_adapter_v2_validator::operation_input::is_probe(&payload) {
                     if let Some(preparation) = bgx_adapter_v2_validator::operation_input::seal_result(&payload, &data).map_err(cv)? {
                         config::save_preparation(&self.config, &payload, &preparation, &self.snapshot)?;
@@ -1177,6 +1187,7 @@ impl ManagedHost for ObservedKernel {
     }
 }
 struct Kernel {
+    form_options: bool,
     metadata_only: bool,
     inner: Arc<Inner>,
     scope: LeaseScope,
@@ -1201,6 +1212,9 @@ impl ManagedHost for Kernel {
             // Preflight has no media leases, remote jobs or checkpoint authority.
             // Unknown dependencies must report blocked; content analysis is a
             // separate explicit operation. Only diagnostic logging is allowed.
+            if self.form_options && !bgx_adapter_v2_ports::wire::form_options_port_allowed(&call) {
+                return Err(policy::error("UNSUPPORTED_FEATURE", "Form options may only read buffered HTTP metadata"));
+            }
             if self.metadata_only && method != "host-log.log" {
                 return Err(policy::error("UNSUPPORTED_FEATURE", "Metadata-only preflight cannot access execution ports"));
             }

@@ -725,6 +725,9 @@ impl Profile {
                 control,
             );
         }
+        if transport == "probe" && payload["kind"] == bgx_adapter_v2_validator::form_options::KIND {
+            return error_response(invocation, "UNSUPPORTED_FEATURE", "No declarative dynamic form options plan", None);
+        }
         if transport == "probe" && bgx_adapter_v2_validator::operation_input::metadata_only_probe(&payload) {
             return error_response(invocation, "UNSUPPORTED_FEATURE",
                 "This declarative profile has no metadata-only operation preflight plan", None);

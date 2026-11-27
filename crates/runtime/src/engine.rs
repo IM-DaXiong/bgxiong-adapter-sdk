@@ -211,6 +211,7 @@ struct State {
     features: Vec<String>,
     offline: bool,
     metadata_only: bool,
+    form_options: bool,
 }
 pub struct Runtime {
     engine: Engine,
@@ -370,6 +371,8 @@ impl Runtime {
                     .iter()
                     .map(|v| v.as_str().unwrap().to_owned())
                     .collect(),
+                form_options: wire["operation"] == "probe" && serde_json::from_str::<Value>(&request.r#payload_json)
+                    .is_ok_and(|payload| payload["kind"] == "operation_form_options"),
                 metadata_only: wire["operation"] == "probe"
                     && bgx_adapter_v2_ports::wire::is_metadata_only_probe(
                         &serde_json::from_str::<Value>(&request.r#payload_json)
@@ -641,7 +644,11 @@ impl Runtime {
                             let args = guest::from_val(&params[0])?;
                             let call = wire_abi::port_arguments_to_wire(&model, &method, &args)
                                 .map_err(|_| wasmtime::format_err!("Invalid managed port arguments"))?;
-                            let response = if store.data().metadata_only && method != "host-log.log" {
+                            let response = if store.data().form_options && !bgx_adapter_v2_ports::wire::form_options_port_allowed(
+                                &serde_json::to_value(&call).expect("validated port call serializes"),
+                            ) {
+                                Err(bgx_adapter_v2_ports::wire::host::invalid_wire("Form options may only read buffered HTTP metadata"))
+                            } else if store.data().metadata_only && method != "host-log.log" {
                                 Err(bgx_adapter_v2_ports::wire::host::invalid_wire(
                                     "Metadata-only preflight cannot access execution ports",
                                 ))

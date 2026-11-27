@@ -95,6 +95,9 @@ impl CapabilityRegistry {
                 let version = operation["version"].as_u64().unwrap();
                 validate_operation_namespace(package.namespace(), id)?;
                 crate::operation_input::validate_declaration(package, operation)?;
+                if operation["uiSchema"]["dynamicOptions"].is_array() && !package.enabled_features().contains(crate::form_options::FEATURE) {
+                    return Err(ContractError::new("UNSUPPORTED_FEATURE", "/uiSchema/dynamicOptions", "Dynamic form options were not negotiated"));
+                }
                 let signature = json!([operation["inputSchema"]["digest"], operation["outputSchema"]["digest"],
                     operation["resumeSchema"].get("digest")]);
                 let key = (id.to_owned(), version);

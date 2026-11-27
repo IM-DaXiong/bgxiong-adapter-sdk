@@ -234,3 +234,11 @@ command/exitCode 是证据声明，conform 不代替你执行所写命令；EVID
 启用 `derived-hmac-credential-v1` 且凭据授权 `hmac-sha256-credential` 时，可调用 `credential-utc-seconds` 读取十进制 Unix 秒字符串，由包按平台规则组装日期和规范请求。`hmac-sha256-credential` 的 `derivation` 可传有序 `messages` 与 `authorizationTemplate`。模版支持 `{publicId}`、`{date}` 及必填的 `{hexHmacOfCanonical}`。派生密钥留在宿主，HTTP 代理只在该凭据授权的源站接受生成的授权头。
 
 隔离语音驱动任务新增 `probe.kind=operation_preflight`。必须要求 `operation-preflight-v1`；语音驱动视频还必须要求 `video-speech-v1`。选择已发现操作的模型/操作/schema身份，传入包schema允许的input、冻结configuration和媒体摘要。运行时只允许诊断日志，服务/模型就绪未知必须阻断；不授权上传、生成或checkpoint写入。详见[语音驱动profile](profiles/video-speech-v1/README.zh-CN.md)。本批未编译未测试，生成类型和公开SDK发行尚待后续。
+
+## 工作台动态选项
+
+需要从当前服务读取候选值的操作在 manifest 的 `requiredFeatures` 声明 `operation-form-options-v1`。已有静态表单无需声明。模型、平台元数据解释和业务规则由包实现。参见 [Palette 可执行示例](examples/form-options/src/lib.rs)。
+
+在 `uiSchema.dynamicOptions` 声明形如 `{"fieldPointer":"/palette","enabledBy":"/colorize"}` 的条目。目标为同一操作可编辑的字符串控件，条件可省略，填写时应指向可编辑的布尔开关。可选值仍须满足输入 schema。工作台展开时通过已绑定配置发送 `probe`，请求包含 `schemaVersion: 2`、`kind: "operation_form_options"`、`modelId`、`capabilityKey`、`operationId`、`operationVersion`、`inputSchemaDigest` 和 `configuration`。请求独立于草稿和任务。
+
+返回 `{"kind":"operation_form_options","fields":[{"fieldPointer":"/palette","choices":["ink","chalk"]}]}`。每个声明字段须恰好出现一次，选项保持顺序且互异。服务不可用或没有选项时，返回空数组及简短的字段级 `reason`。查询仅支持诊断日志和受已授权 origin 约束的 GET，HTTP 请求体为空，响应使用最大 4 MiB 的 buffer。将业务的可用性判定同时保留在实际 submit 中。

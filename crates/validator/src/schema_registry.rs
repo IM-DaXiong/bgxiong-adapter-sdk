@@ -478,6 +478,20 @@ impl SchemaRegistry {
     /// Resolve a JSON Pointer through properties and indexed array items using the native registry's
     /// scoped IDs, anchors and references; this is structural form introspection.
     pub fn input_field_schema(&self, id: &str, pointer: &str) -> Result<Value, ContractError> {
+        self.resolved_field(id, pointer).map(|(schema, _)| schema)
+    }
+
+    /// Compile the resolved field with the same offline references and format rules as the operation.
+    pub(crate) fn input_field_validator(&self, id: &str, pointer: &str) -> Result<jsonschema::Validator, ContractError> {
+        let (schema, base) = self.resolved_field(id, pointer)?;
+        jsonschema::draft202012::options()
+            .with_registry(&self.prepared).offline().with_base_uri(base)
+            .should_validate_formats(true).should_ignore_unknown_formats(false)
+            .build(&schema)
+            .map_err(|_| ContractError::new("INVALID_PACKAGE", pointer, "Cannot compile dynamic field schema"))
+    }
+
+    fn resolved_field(&self, id: &str, pointer: &str) -> Result<(Value, String), ContractError> {
         if !pointer.is_empty() && !pointer.starts_with('/') {
             return Err(ContractError::new(
                 "INVALID_PACKAGE",
@@ -529,8 +543,8 @@ impl SchemaRegistry {
                     ContractError::new("INVALID_PACKAGE", pointer, "field scope invalid")
                 })?;
         }
-        let (node, _) = resolve_node(node, scoped, pointer)?;
-        Ok(node.clone())
+        let (node, resolver) = resolve_node(node, scoped, pointer)?;
+        Ok((node.clone(), resolver.base_uri().to_string()))
     }
     pub fn validate(&self, id: &str, input: &Value) -> Result<(), ContractError> {
         self.compiled

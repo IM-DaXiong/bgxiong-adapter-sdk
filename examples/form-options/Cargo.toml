@@ -1,0 +1,22 @@
+[workspace]
+members = ["."]
+
+
+[package]
+name = "bgx-example-form-options"
+version = "1.0.0"
+edition = "2021"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bgx-adapter-v2-sdk = { path = "../../templates/rust/vendor-sdk/sdk/rust" }
+serde_json = { version = "=1.0.149", default-features = false, features = ["alloc", "arbitrary_precision"] }
+
+[profile.release]
+panic = "abort"
+debug = 0
+incremental = false

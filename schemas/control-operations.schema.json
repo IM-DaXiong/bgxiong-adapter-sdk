@@ -70,6 +70,54 @@
         },
         {
           "$ref": "https://bgxiong.local/vendor-adapter/v2/operation-input.schema.json#/$defs/request"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 2
+            },
+            "kind": {
+              "const": "operation_form_options"
+            },
+            "modelId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "capabilityKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "operationId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "operationVersion": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "inputSchemaDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "configuration": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "kind",
+            "modelId",
+            "capabilityKey",
+            "operationId",
+            "operationVersion",
+            "inputSchemaDigest",
+            "configuration"
+          ],
+          "additionalProperties": false
         }
       ]
     },
@@ -145,6 +193,54 @@
         },
         {
           "$ref": "https://bgxiong.local/vendor-adapter/v2/operation-input.schema.json#/$defs/result"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "operation_form_options"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fieldPointer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "choices": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024
+                    },
+                    "maxItems": 2048,
+                    "uniqueItems": true
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  }
+                },
+                "required": [
+                  "fieldPointer",
+                  "choices"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 64,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "kind",
+            "fields"
+          ],
+          "additionalProperties": false
         }
       ]
     },
