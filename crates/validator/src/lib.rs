@@ -12,6 +12,7 @@ pub mod result;
 pub mod usage;
 pub mod image_projection;
 pub mod media_projection;
+pub mod media_target_range_repair;
 pub mod media_target_selection;
 pub mod video_target_keyframes;
 pub mod operation_preflight;

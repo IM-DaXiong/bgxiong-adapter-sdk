@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/media-target-range-repair-v1/freeze.schema.json",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "const": "trajectoryFreeze"
+    },
+    "binding": {
+      "$ref": "trajectory.schema.json#/$defs/binding"
+    },
+    "revision": {
+      "$ref": "trajectory.schema.json#/$defs/revision"
+    }
+  },
+  "required": [
+    "kind",
+    "binding",
+    "revision"
+  ],
+  "additionalProperties": false,
+  "$defs": {}
+}

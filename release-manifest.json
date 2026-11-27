@@ -493,7 +493,7 @@
     {
       "source": "crates/validator/src/lib.rs",
       "target": "crates/validator/src/lib.rs",
-      "sha256": "06d22939add5114bdd8c0af58102ffd1a5ce5478e3f30f43f44d7dce1415c339",
+      "sha256": "9497eff4781efb43a4ebcc280e9463837deaf6e1b7ee3d359eece8479c3bce60",
       "required": true
     },
     {
@@ -517,7 +517,7 @@
     {
       "source": "crates/validator/src/schema_registry.rs",
       "target": "crates/validator/src/schema_registry.rs",
-      "sha256": "db88b1f9bbbe46976041a7cf672a2b9b6061d2fafd7425ccf548ed3d05ce6b5e",
+      "sha256": "2455db07bc9cee9ec983edd6d491ddcb5fc098c97a399f10d98b4485c6d7847b",
       "required": true
     },
     {
@@ -901,7 +901,7 @@
     {
       "source": "protocol/host-feature-catalog.json",
       "target": "protocol/host-feature-catalog.json",
-      "sha256": "662da96423f26d170c54ec7270f5e59e793fe8070002602c46c9d0dbfd1ab5f5",
+      "sha256": "f88959033095259011b2a38143b2179c0868fb605ee004298307fb3003f9a3d9",
       "required": true
     },
     {
@@ -1766,6 +1766,60 @@
       "source": "profiles/operation-input-v1/examples.json",
       "target": "profiles/operation-input-v1/examples.json",
       "sha256": "9f346d7c76588299f9f2bc7f83249590bbb3d04c53503ac269810f28108d9839",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/apply.schema.json",
+      "target": "profiles/media-target-range-repair-v1/apply.schema.json",
+      "sha256": "84046a369733f2de47d7ee7a860df84b2a889e3e5cc30a9edfccf689051ca7e6",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/declaration.schema.json",
+      "target": "profiles/media-target-range-repair-v1/declaration.schema.json",
+      "sha256": "ca4c488daaf4f09a807717ec818349c37bee325589d10d09e08f89654936e3bb",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/fixtures/receipts.json",
+      "target": "profiles/media-target-range-repair-v1/fixtures/receipts.json",
+      "sha256": "5e8afda51f36a1a4fedc497a846c02e770c9879ac829c2526bc1d8f469c0625d",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/freeze.schema.json",
+      "target": "profiles/media-target-range-repair-v1/freeze.schema.json",
+      "sha256": "57c997cc074c48b208a23ed38d4a87f578833d982f42fba9551b002b0d1b59a6",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/patch.schema.json",
+      "target": "profiles/media-target-range-repair-v1/patch.schema.json",
+      "sha256": "30c36e3b11d20b2c1c2703264ee7cd0c216d79dfdc36aa9482e8707076b8960c",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/seed.schema.json",
+      "target": "profiles/media-target-range-repair-v1/seed.schema.json",
+      "sha256": "357e4d59ac6fe60ed2c4263cac757d2038a4b21a26107a4d2aa09db2c5088ba8",
+      "required": true
+    },
+    {
+      "source": "profiles/media-target-range-repair-v1/trajectory.schema.json",
+      "target": "profiles/media-target-range-repair-v1/trajectory.schema.json",
+      "sha256": "b2a9a9241457ef8dad9c1d2c3bf017d5b638c4777888d4337eef99172c059f5c",
+      "required": true
+    },
+    {
+      "source": "crates/validator/src/media_target_range_repair.rs",
+      "target": "crates/validator/src/media_target_range_repair.rs",
+      "sha256": "71460848ae525c8d46b4bc2baf675027cea0d7241724f251fc0d58aedc6ff4c7",
+      "required": true
+    },
+    {
+      "source": "crates/validator/tests/media_target_range_repair.rs",
+      "target": "crates/validator/tests/media_target_range_repair.rs",
+      "sha256": "ed7541a8d0b3d5b0e011bbe28fd423f45cc9e8f0e60953c6081738f656746f47",
       "required": true
     }
   ]

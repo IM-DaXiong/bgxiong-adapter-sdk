@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/media-target-range-repair-v1/declaration.schema.json",
+  "type": "object",
+  "properties": {
+    "profileId": {
+      "const": "media-target-range-repair-v1"
+    },
+    "revision": {
+      "const": 1
+    },
+    "seedOperationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "trajectoryOperationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "patchOperationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "profileId",
+    "revision",
+    "seedOperationId",
+    "trajectoryOperationId",
+    "patchOperationId"
+  ],
+  "additionalProperties": false,
+  "$defs": {}
+}

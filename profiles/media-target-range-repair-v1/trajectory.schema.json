@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/media-target-range-repair-v1/trajectory.schema.json",
+  "oneOf": [
+    {
+      "$ref": "trajectory.schema.json#/$defs/request"
+    },
+    {
+      "$ref": "trajectory.schema.json#/$defs/receipt"
+    }
+  ],
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "properties": {
+        "sourceDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "frameMapDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "ownerDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "settingsDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "adapterDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "identityDigest": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "sourceDigest",
+        "frameMapDigest",
+        "targetId",
+        "ownerDigest",
+        "settingsDigest",
+        "adapterDigest",
+        "identityDigest"
+      ],
+      "additionalProperties": false
+    },
+    "revision": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "trajectoryDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "revision",
+        "trajectoryDigest"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "trajectoryRequest"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "range": {
+          "$ref": "seed.schema.json#/$defs/frameRange"
+        },
+        "anchor": {
+          "$ref": "seed.schema.json#/$defs/anchor"
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "range",
+        "anchor"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "trajectoryReceipt"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "range": {
+          "$ref": "seed.schema.json#/$defs/frameRange"
+        },
+        "revision": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        },
+        "artifactRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "$ref": "trajectory.schema.json#/$defs/run"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "range",
+        "revision",
+        "artifactRef",
+        "runs"
+      ],
+      "additionalProperties": false
+    },
+    "run": {
+      "type": "object",
+      "properties": {
+        "startFrame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "endFrame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "state": {
+          "enum": [
+            "present",
+            "lost",
+            "skip"
+          ]
+        }
+      },
+      "required": [
+        "startFrame",
+        "endFrame",
+        "state"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

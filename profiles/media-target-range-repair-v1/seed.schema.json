@@ -1,0 +1,363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/media-target-range-repair-v1/seed.schema.json",
+  "oneOf": [
+    {
+      "$ref": "seed.schema.json#/$defs/request"
+    },
+    {
+      "$ref": "seed.schema.json#/$defs/receipt"
+    },
+    {
+      "$ref": "seed.schema.json#/$defs/detectRequest"
+    },
+    {
+      "$ref": "seed.schema.json#/$defs/detectReceipt"
+    }
+  ],
+  "$defs": {
+    "request": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "seedRequest"
+        },
+        "sourceVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "timeUs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "kind",
+        "sourceVersion",
+        "targetId",
+        "startMs",
+        "endMs",
+        "timeUs"
+      ],
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "seedReceipt"
+        },
+        "sourceVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "frame": {
+          "$ref": "seed.schema.json#/$defs/frame"
+        },
+        "previewMediaRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "imageDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "candidateId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "box": {
+                "$ref": "seed.schema.json#/$defs/box"
+              }
+            },
+            "required": [
+              "candidateId",
+              "box"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "kind",
+        "sourceVersion",
+        "targetId",
+        "frame",
+        "previewMediaRef",
+        "imageDigest",
+        "width",
+        "height",
+        "candidates"
+      ],
+      "additionalProperties": false
+    },
+    "detectRequest": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "detectRequest"
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "$ref": "seed.schema.json#/$defs/sample"
+          },
+          "maxItems": 5,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "kind",
+        "samples"
+      ],
+      "additionalProperties": false
+    },
+    "detectReceipt": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "detectReceipt"
+        },
+        "mediaId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "imageDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "candidateId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "box": {
+                "$ref": "seed.schema.json#/$defs/box"
+              }
+            },
+            "required": [
+              "candidateId",
+              "box"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 128
+        }
+      },
+      "required": [
+        "kind",
+        "mediaId",
+        "imageDigest",
+        "candidates"
+      ],
+      "additionalProperties": false
+    },
+    "frame": {
+      "type": "object",
+      "properties": {
+        "pts": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "timeBaseNumerator": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "timeBaseDenominator": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "timeUs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "pts",
+        "timeBaseNumerator",
+        "timeBaseDenominator",
+        "ordinal",
+        "timeUs"
+      ],
+      "additionalProperties": false
+    },
+    "box": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "anchor": {
+      "type": "object",
+      "properties": {
+        "frame": {
+          "$ref": "seed.schema.json#/$defs/frame"
+        },
+        "box": {
+          "$ref": "seed.schema.json#/$defs/box"
+        },
+        "imageDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "candidateId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "frame",
+        "box",
+        "imageDigest"
+      ],
+      "additionalProperties": false
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "frame": {
+          "$ref": "seed.schema.json#/$defs/frame"
+        },
+        "mediaId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "imageDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "frame",
+        "mediaId",
+        "imageDigest",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "frameRange": {
+      "type": "object",
+      "properties": {
+        "startFrame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "endFrame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "startFrame",
+        "endFrame"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

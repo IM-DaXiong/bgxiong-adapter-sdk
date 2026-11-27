@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/media-target-range-repair-v1/patch.schema.json",
+  "oneOf": [
+    {
+      "$ref": "patch.schema.json#/$defs/retrack"
+    },
+    {
+      "$ref": "patch.schema.json#/$defs/skip"
+    },
+    {
+      "$ref": "patch.schema.json#/$defs/candidate"
+    }
+  ],
+  "$defs": {
+    "retrack": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "retrack"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "parent": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        },
+        "range": {
+          "$ref": "seed.schema.json#/$defs/frameRange"
+        },
+        "anchorFrame": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "anchor": {
+          "$ref": "seed.schema.json#/$defs/anchor"
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "parent",
+        "range",
+        "anchorFrame",
+        "anchor"
+      ],
+      "additionalProperties": false
+    },
+    "skip": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "skip"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "parent": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        },
+        "range": {
+          "$ref": "seed.schema.json#/$defs/frameRange"
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "parent",
+        "range"
+      ],
+      "additionalProperties": false
+    },
+    "candidate": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "patchCandidate"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "parent": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        },
+        "range": {
+          "$ref": "seed.schema.json#/$defs/frameRange"
+        },
+        "candidateId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "patchDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "artifactRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "$ref": "trajectory.schema.json#/$defs/run"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "parent",
+        "range",
+        "candidateId",
+        "patchDigest",
+        "artifactRef",
+        "runs"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

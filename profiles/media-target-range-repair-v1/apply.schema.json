@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bgxiong.local/vendor-adapter/v2/profiles/media-target-range-repair-v1/apply.schema.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "applyRequest"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "parent": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        },
+        "candidateId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "patchDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "parent",
+        "candidateId",
+        "patchDigest"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "applyReceipt"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding": {
+          "$ref": "trajectory.schema.json#/$defs/binding"
+        },
+        "parent": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        },
+        "revision": {
+          "$ref": "trajectory.schema.json#/$defs/revision"
+        }
+      },
+      "required": [
+        "kind",
+        "requestId",
+        "binding",
+        "parent",
+        "revision"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {}
+}

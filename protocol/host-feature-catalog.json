@@ -40,6 +40,11 @@
       "semantics": "Multi-keyframe video target correction, directional tracking progress/receipts, opaque mask freeze without analysisId"
     },
     {
+      "id": "media-target-range-repair-v1",
+      "requiredImports": [],
+      "semantics": "Frame-local target selection, confirmed trajectory revisions and bounded corrections applied against an exact parent"
+    },
+    {
       "id": "operation-preflight-v1",
       "requiredImports": [],
       "semantics": "Metadata-only operation preflight with frozen operation/schema/configuration identity; no submit, upload, credentials or checkpoints"

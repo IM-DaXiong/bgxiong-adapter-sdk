@@ -1,0 +1,96 @@
+{
+  "seed": {
+    "kind": "seedReceipt",
+    "sourceVersion": "video-v1",
+    "targetId": "person-1",
+    "frame": {
+      "pts": 125,
+      "timeBaseNumerator": 1,
+      "timeBaseDenominator": 25,
+      "ordinal": 0,
+      "timeUs": 5000000
+    },
+    "previewMediaRef": "face-sample.png",
+    "imageDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "width": 1920,
+    "height": 1080,
+    "candidates": []
+  },
+  "retrack": {
+    "kind": "retrack",
+    "requestId": "repair-1",
+    "binding": {
+      "sourceDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "frameMapDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "ownerDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "settingsDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "adapterDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "targetId": "person-1",
+      "identityDigest": null
+    },
+    "parent": {
+      "revision": "r1",
+      "trajectoryDigest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    "range": {
+      "startFrame": 100,
+      "endFrame": 150
+    },
+    "anchorFrame": 125,
+    "anchor": {
+      "frame": {
+        "pts": 125,
+        "timeBaseNumerator": 1,
+        "timeBaseDenominator": 25,
+        "ordinal": 0,
+        "timeUs": 5000000
+      },
+      "box": {
+        "x": 0.25,
+        "y": 0.18,
+        "width": 0.16,
+        "height": 0.3
+      },
+      "imageDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  },
+  "trajectory": {
+    "kind": "trajectoryReceipt",
+    "requestId": "track-1",
+    "binding": {
+      "sourceDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "frameMapDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "ownerDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "settingsDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "adapterDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "targetId": "person-1",
+      "identityDigest": null
+    },
+    "range": {
+      "startFrame": 0,
+      "endFrame": 250
+    },
+    "revision": {
+      "revision": "r1",
+      "trajectoryDigest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    "artifactRef": "trajectory-r1.json",
+    "runs": [
+      {
+        "startFrame": 0,
+        "endFrame": 100,
+        "state": "present"
+      },
+      {
+        "startFrame": 100,
+        "endFrame": 150,
+        "state": "lost"
+      },
+      {
+        "startFrame": 150,
+        "endFrame": 250,
+        "state": "present"
+      }
+    ]
+  }
+}
