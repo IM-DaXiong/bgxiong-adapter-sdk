@@ -919,7 +919,7 @@
     {
       "source": "protocol/vendor-adapter-protocol.json",
       "target": "protocol/vendor-adapter-protocol.json",
-      "sha256": "bff39a57c19a7d11dda4b925c844b52f8dc5a71eea76d90197fc6d77aa1acd3a",
+      "sha256": "ec9b86887057f3ca29fe7b41f5f691a5c43da5d72d0b2bafd4efc3c097e7957e",
       "required": true
     },
     {
@@ -1922,6 +1922,30 @@
       "source": "profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
       "target": "profiles/speech-analysis-v1/transcribe-policy.configuration.schema.json",
       "sha256": "0c6bf69f5336c00d77f5bdcdb17f1fdda3d1462a47796b35cf8ff5d230f2cfa9",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/subtitle.input.schema.json",
+      "target": "profiles/speech-analysis-v1/subtitle.input.schema.json",
+      "sha256": "2aaaa586a8298ca72668cec2537d731ec80918f7ef71d269ec948565687b9211",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/subtitle.output.schema.json",
+      "target": "profiles/speech-analysis-v1/subtitle.output.schema.json",
+      "sha256": "3b7f80f34b552b119c7264557249adbffdc6f4ecc50d9d6ddcea46e67cdb119e",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/fixtures/subtitle-capability.json",
+      "target": "profiles/speech-analysis-v1/fixtures/subtitle-capability.json",
+      "sha256": "6925d8aaf1b0335aef947b569b9b21d2ca8619674a16543c640d71a73afcaa47",
+      "required": true
+    },
+    {
+      "source": "profiles/speech-analysis-v1/fixtures/subtitle-result.json",
+      "target": "profiles/speech-analysis-v1/fixtures/subtitle-result.json",
+      "sha256": "b660c72c46c922a882f609cbe70efd3d3b7729fada1cfac66bc23d8a52e4396e",
       "required": true
     }
   ]

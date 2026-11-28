@@ -48,9 +48,23 @@
     "video.edit",
     "speech.diarize",
     "speech.transcribe",
+    "speech.subtitle",
     "speech.transcribe.policy"
   ],
   "standardProfiles": [
+    {
+      "operationId": "std/speech.transcribe.policy",
+      "operationVersion": 1,
+      "inputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
+        "digest": "be2956fa53c770345f359db2aa66d1fd1c95d4cfba75683b09ef1c4f84218cd5"
+      },
+      "outputSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
+        "digest": "4525fd177c4c671aeb5d74a96e523592b16a77c921b1d6f129fb1cb4c25f8c35"
+      },
+      "resumeSchema": null
+    },
     {
       "operationId": "std/speech.synthesize",
       "operationVersion": 1,
@@ -132,17 +146,20 @@
       }
     },
     {
-      "operationId": "std/speech.transcribe.policy",
+      "operationId": "std/speech.subtitle",
       "operationVersion": 1,
       "inputSchema": {
-        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.input.schema.json",
-        "digest": "be2956fa53c770345f359db2aa66d1fd1c95d4cfba75683b09ef1c4f84218cd5"
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/subtitle.input.schema.json",
+        "digest": "2aaaa586a8298ca72668cec2537d731ec80918f7ef71d269ec948565687b9211"
       },
       "outputSchema": {
-        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe-policy.output.schema.json",
-        "digest": "4525fd177c4c671aeb5d74a96e523592b16a77c921b1d6f129fb1cb4c25f8c35"
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/subtitle.output.schema.json",
+        "digest": "3b7f80f34b552b119c7264557249adbffdc6f4ecc50d9d6ddcea46e67cdb119e"
       },
-      "resumeSchema": null
+      "resumeSchema": {
+        "id": "https://bgxiong.local/vendor-adapter/v2/profiles/speech-analysis-v1/transcribe.resume.schema.json",
+        "digest": "3e85938eefb1467f21e84f156115c1ba0c53638e7b2b544ac6f93be9d11593bd"
+      }
     }
   ],
   "usageNames": {
